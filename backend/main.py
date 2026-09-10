@@ -547,3 +547,52 @@ def serve_dashboard():
 def serve_favicon():
     return JSONResponse(content={}, status_code=204)
 
+# ----------------- STATIC ASSET FALLBACK ROUTES -----------------
+
+@app.get("/css/{filename:path}")
+def serve_css_fallback(filename: str):
+    for candidate in [
+        os.path.join(FRONTEND_CSS, filename),
+        os.path.join(PARENT_DIR, "public", "css", filename),
+        os.path.join(PARENT_DIR, "css", filename)
+    ]:
+        if os.path.exists(candidate):
+            return FileResponse(candidate, media_type="text/css")
+    raise HTTPException(status_code=404, detail="CSS file not found")
+
+@app.get("/js/{filename:path}")
+def serve_js_fallback(filename: str):
+    for candidate in [
+        os.path.join(FRONTEND_JS, filename),
+        os.path.join(PARENT_DIR, "public", "js", filename),
+        os.path.join(PARENT_DIR, "js", filename)
+    ]:
+        if os.path.exists(candidate):
+            return FileResponse(candidate, media_type="application/javascript")
+    raise HTTPException(status_code=404, detail="JS file not found")
+
+@app.get("/assets/{filename:path}")
+def serve_assets_fallback(filename: str):
+    for candidate in [
+        os.path.join(FRONTEND_ASSETS, filename),
+        os.path.join(PARENT_DIR, "public", "assets", filename),
+        os.path.join(PARENT_DIR, "assets", filename),
+        os.path.join(PARENT_DIR, "uploads", filename)
+    ]:
+        if os.path.exists(candidate):
+            return FileResponse(candidate)
+    raise HTTPException(status_code=404, detail="Asset not found")
+
+@app.get("/static/css/{filename:path}")
+def serve_static_css_fallback(filename: str):
+    return serve_css_fallback(filename)
+
+@app.get("/static/js/{filename:path}")
+def serve_static_js_fallback(filename: str):
+    return serve_js_fallback(filename)
+
+@app.get("/static/assets/{filename:path}")
+def serve_static_assets_fallback(filename: str):
+    return serve_assets_fallback(filename)
+
+
