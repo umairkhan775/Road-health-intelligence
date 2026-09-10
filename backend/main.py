@@ -12,7 +12,7 @@ import datetime
 from typing import Optional, List
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PARENT_DIR = os.path.dirname(os.path.dirname(CURRENT_DIR)) if os.path.basename(os.path.dirname(CURRENT_DIR)) == "frontend" else os.path.dirname(CURRENT_DIR)
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
 if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 if PARENT_DIR not in sys.path:
@@ -59,14 +59,28 @@ app.add_middleware(
 )
 
 # Resolve directories
-UPLOADS_DIR = os.path.join(PARENT_DIR, "uploads")
+if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or not os.access(PARENT_DIR, os.W_OK):
+    UPLOADS_DIR = "/tmp/uploads"
+else:
+    UPLOADS_DIR = os.path.join(PARENT_DIR, "uploads")
+
 FRONTEND_DIR = os.path.join(PARENT_DIR, "frontend")
+if not os.path.exists(FRONTEND_DIR):
+    FRONTEND_DIR = PARENT_DIR
+
 FRONTEND_ASSETS = os.path.join(FRONTEND_DIR, "assets")
 FRONTEND_CSS = os.path.join(FRONTEND_DIR, "css")
 FRONTEND_JS = os.path.join(FRONTEND_DIR, "js")
 
-os.makedirs(UPLOADS_DIR, exist_ok=True)
-os.makedirs(FRONTEND_ASSETS, exist_ok=True)
+try:
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+except Exception:
+    pass
+
+try:
+    os.makedirs(FRONTEND_ASSETS, exist_ok=True)
+except Exception:
+    pass
 
 # Mount static asset folders
 if os.path.exists(FRONTEND_ASSETS):
@@ -80,10 +94,23 @@ if os.path.exists(FRONTEND_CSS):
 if os.path.exists(FRONTEND_JS):
     app.mount("/js", StaticFiles(directory=FRONTEND_JS), name="js")
 
+# Auto-seed on startup / serverless initialization
+_seeded = False
+def ensure_db():
+    global _seeded
+    if not _seeded:
+        try:
+            init_db_and_seed()
+            _seeded = True
+        except Exception as e:
+            print(f"[RHI BACKEND] Database init note: {e}")
+
 @app.on_event("startup")
 def startup_event():
-    init_db_and_seed()
+    ensure_db()
     print("[RHI BACKEND] Server initialized successfully.")
+
+ensure_db()
 
 # ----------------- SYSTEM & HEALTH ENDPOINTS -----------------
 
@@ -174,6 +201,9 @@ def get_defects(severity: Optional[str] = None, status: Optional[str] = None, db
 
 @app.post("/api/defects")
 def create_defect(data: dict, db: Session = Depends(get_db)):
+    """
+    Registers a new defect or clusters it with an existing defect within 20 meters.
+    """
     lat = float(data.get("latitude", 28.6139))
     lon = float(data.get("longitude", 77.2090))
     defect_type = data.get("defect_type", "Pothole")
@@ -224,6 +254,7 @@ def create_defect(data: dict, db: Session = Depends(get_db)):
             "message": f"Clustered with existing defect {match.defect_code} ({dist:.1f}m away)."
         }
 
+    # Otherwise, create new Defect
     pri_info = calculate_priority(defect_type, severity, road_code)
     pri_score = pri_info["priority_score"]
     factors = pri_info["factors"]
@@ -254,6 +285,7 @@ def create_defect(data: dict, db: Session = Depends(get_db)):
     db.add(new_defect)
     db.flush()
 
+    # Initial Observation
     new_obs = Observation(
         defect_id=new_defect.id,
         observation_code=f"OBS-{new_code}-01",
@@ -265,6 +297,7 @@ def create_defect(data: dict, db: Session = Depends(get_db)):
     )
     db.add(new_obs)
 
+    # Automated Work Order dispatch
     wo_code = f"WO-{next_num}"
     sla = pri_info["sla_hours"]
     new_wo = WorkOrder(
@@ -280,6 +313,7 @@ def create_defect(data: dict, db: Session = Depends(get_db)):
     )
     db.add(new_wo)
 
+    # Initial Audit Trail
     audit1 = AuditEvent(
         defect_id=new_defect.id,
         event_type="AI_DETECTION",
@@ -497,11 +531,19 @@ def get_analytics(db: Session = Depends(get_db)):
 
 @app.get("/")
 def serve_index():
+    ensure_db()
     index_path = os.path.join(FRONTEND_DIR, "index.html")
     if not os.path.exists(index_path):
         index_path = os.path.join(PARENT_DIR, "index.html")
-    return FileResponse(index_path)
+    if os.path.exists(index_path):
+        return FileResponse(index_path, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Road Health Intelligence frontend index.html not found.")
 
 @app.get("/dashboard")
 def serve_dashboard():
     return serve_index()
+
+@app.get("/favicon.ico")
+def serve_favicon():
+    return JSONResponse(content={}, status_code=204)
+

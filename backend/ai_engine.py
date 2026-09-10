@@ -18,7 +18,7 @@ except Exception:
     HAS_CV2 = False
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PARENT_DIR = os.path.dirname(os.path.dirname(CURRENT_DIR)) if os.path.basename(os.path.dirname(CURRENT_DIR)) == "frontend" else os.path.dirname(CURRENT_DIR)
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
 
 MODEL_PATH_CUSTOM = os.path.join(PARENT_DIR, "models", "best.pt")
 MODEL_PATH_DEFAULT = os.path.join(PARENT_DIR, "yolov8n.pt")
@@ -181,7 +181,10 @@ def analyze_road_image(image_bytes: bytes, filename: str = "upload.jpg"):
     annotated_pil = draw_hud_bounding_box(img.copy(), detections)
 
     # Save annotated image into uploads directory
-    uploads_dir = os.path.join(PARENT_DIR, "uploads")
+    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or not os.access(PARENT_DIR, os.W_OK):
+        uploads_dir = "/tmp/uploads"
+    else:
+        uploads_dir = os.path.join(PARENT_DIR, "uploads")
     os.makedirs(uploads_dir, exist_ok=True)
     timestamp = int(time.time() * 1000)
     orig_filename = f"upload_{timestamp}.jpg"

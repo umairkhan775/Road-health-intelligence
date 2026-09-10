@@ -315,8 +315,10 @@ function setupScannerEvents() {
 
         const endpoints = [
           `${API_BASE}/api/detect`,
-          `/api/detect`
-        ].filter(Boolean);
+          `/api/detect`,
+          `http://127.0.0.1:8000/api/detect`,
+          `http://localhost:8000/api/detect`
+        ];
 
         for (const ep of endpoints) {
           try {
@@ -376,8 +378,9 @@ function setupScannerEvents() {
       try {
         const endpoints = [
           `${API_BASE}/api/defects`,
-          `/api/defects`
-        ].filter(Boolean);
+          `/api/defects`,
+          `http://127.0.0.1:8000/api/defects`
+        ];
 
         for (const ep of endpoints) {
           try {
