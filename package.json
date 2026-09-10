@@ -1,17 +1,7 @@
 {
-  "name": "rhi-dashboard",
+  "name": "road-health-intelligence",
+  "version": "2.0.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
-  },
-  "devDependencies": {
-    "autoprefixer": "^10.5.4",
-    "postcss": "^8.5.26",
-    "tailwindcss": "^3.4.17"
-  }
+  "description": "AI-Powered 3D Road Infrastructure Intelligence and Command Center Platform",
+  "scripts": {}
 }

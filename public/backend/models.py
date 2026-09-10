@@ -1,13 +1,29 @@
 """
 Road Health Intelligence (RHI) - SQLAlchemy Models
-Database tables for full lifecycle: Photo -> AI Detection -> GPS -> Defect -> Priority -> Work Order -> Repair -> AI Verification -> Warranty Recurrence -> Audit
 """
+import os
+import sys
 import datetime
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if os.path.basename(CURRENT_DIR) in ("backend", "api"):
+    PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
+else:
+    PROJECT_ROOT = CURRENT_DIR
+
+for p in [PROJECT_ROOT, os.path.join(PROJECT_ROOT, "backend")]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text
 )
 from sqlalchemy.orm import relationship
-from backend.database import Base
+
+try:
+    from backend.database import Base
+except ImportError:
+    from database import Base
 
 class User(Base):
     __tablename__ = "users"
@@ -65,7 +81,6 @@ class Defect(Base):
     bbox_json = Column(Text, nullable=True)
 
     # Status Flow
-    # NEW -> ASSIGNED -> IN PROGRESS -> REPAIR SUBMITTED -> AI VERIFICATION -> VERIFIED -> RECURRING
     status = Column(String, default="NEW")
     observation_count = Column(Integer, default=1)
     
@@ -83,7 +98,6 @@ class Defect(Base):
     audit_events = relationship("AuditEvent", back_populates="defect", cascade="all, delete-orphan")
 
 class Observation(Base):
-    """Multiple sightings from different vehicles/cameras that cluster into 1 Defect."""
     __tablename__ = "observations"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -92,7 +106,7 @@ class Observation(Base):
     latitude = Column(Float)
     longitude = Column(Float)
     confidence = Column(Float, default=0.90)
-    source = Column(String, default="Patrol Dashcam AI")  # Patrol Dashcam, Citizen App, Drone Scan, Municipal Fleet
+    source = Column(String, default="Patrol Dashcam AI")
     image_url = Column(String, nullable=True)
     captured_at = Column(DateTime, default=datetime.datetime.utcnow)
 
@@ -110,7 +124,6 @@ class WorkOrder(Base):
     sla_hours = Column(Integer, default=24)         # 24, 48, 72
     sla_deadline = Column(DateTime, nullable=True)
     
-    # Status: ASSIGNED -> IN PROGRESS -> REPAIR SUBMITTED -> AI VERIFICATION -> VERIFIED
     status = Column(String, default="ASSIGNED")
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
@@ -145,7 +158,7 @@ class Verification(Base):
     after_image_url = Column(String)
     is_verified = Column(Boolean, default=False)
     confidence = Column(Float, default=0.968)
-    scan_result = Column(String, default="REPAIR VERIFIED") # REPAIR VERIFIED / VERIFICATION FAILED
+    scan_result = Column(String, default="REPAIR VERIFIED")
     defect_remaining_pct = Column(Float, default=0.0)
     ai_engine = Column(String, default="YOLOv8n Verification Pipeline")
     verification_notes = Column(Text, nullable=True)
@@ -166,18 +179,17 @@ class WarrantyRecord(Base):
     is_recurring = Column(Boolean, default=False)
     recurrence_date = Column(DateTime, nullable=True)
     recurrence_defect_id = Column(String, nullable=True)
-    status = Column(String, default="ACTIVE") # ACTIVE, EXPIRED, BREACHED_RECURRENCE
+    status = Column(String, default="ACTIVE")
 
     defect = relationship("Defect", back_populates="warranty_records")
 
 class AuditEvent(Base):
-    """Immutable audit trail for complete defect accountability."""
     __tablename__ = "audit_events"
 
     id = Column(Integer, primary_key=True, index=True)
     defect_id = Column(Integer, ForeignKey("defects.id"))
-    event_type = Column(String) # AI_DETECTION, GPS_CAPTURE, DEFECT_CREATED, PRIORITY_ASSIGNED, WORK_ORDER_ISSUED, REPAIR_SUBMITTED, AI_VERIFICATION, WARRANTY_ACTIVE, RECURRENCE_TRIGGERED
-    stage = Column(String)      # DETECT, PRIORITIZE, REPAIR, VERIFY, WARRANTY
+    event_type = Column(String)
+    stage = Column(String)
     title = Column(String)
     description = Column(Text)
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)

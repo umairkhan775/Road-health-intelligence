@@ -6,11 +6,14 @@ import sys
 import datetime
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PARENT_DIR = os.path.dirname(CURRENT_DIR)
-if CURRENT_DIR not in sys.path:
-    sys.path.insert(0, CURRENT_DIR)
-if PARENT_DIR not in sys.path:
-    sys.path.insert(0, PARENT_DIR)
+if os.path.basename(CURRENT_DIR) in ("backend", "api"):
+    PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
+else:
+    PROJECT_ROOT = CURRENT_DIR
+
+for p in [PROJECT_ROOT, os.path.join(PROJECT_ROOT, "backend")]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Text

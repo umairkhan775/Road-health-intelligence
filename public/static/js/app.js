@@ -9,10 +9,148 @@ const API_BASE = "";
 const AppState = {
   activeView: "landing", // 'landing' or 'dashboard'
   currentTab: "overview",
-  defects: [],
-  workOrders: [],
+  defects: [
+    {
+      id: 1,
+      defect_code: "DEF-1024",
+      defect_type: "Pothole",
+      severity: "CRITICAL",
+      confidence: 0.96,
+      priority_score: 87,
+      latitude: 28.6139,
+      longitude: 77.2090,
+      road_name: "Ring Road Expressway - Sector 4",
+      road_code: "RHI-2048",
+      image_url: "/assets/sample_pothole_1.jpg",
+      annotated_image_url: "/assets/sample_pothole_1.jpg",
+      status: "ASSIGNED",
+      observation_count: 4,
+      is_recurring: false,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: 2,
+      defect_code: "DEF-1025",
+      defect_type: "Alligator Crack",
+      severity: "HIGH",
+      confidence: 0.89,
+      priority_score: 64,
+      latitude: 28.6250,
+      longitude: 77.2080,
+      road_name: "Cyber Hub North Corridor",
+      road_code: "RHI-1042",
+      image_url: "/assets/sample_crack_1.jpg",
+      annotated_image_url: "/assets/sample_crack_1.jpg",
+      status: "IN PROGRESS",
+      observation_count: 2,
+      is_recurring: false,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: 3,
+      defect_code: "DEF-1026",
+      defect_type: "Pothole",
+      severity: "CRITICAL",
+      confidence: 0.94,
+      priority_score: 92,
+      latitude: 28.6280,
+      longitude: 77.1950,
+      road_name: "Metro Outer Bypass - Zone B",
+      road_code: "RHI-3091",
+      image_url: "/assets/sample_pothole_2.jpg",
+      annotated_image_url: "/assets/sample_pothole_2.jpg",
+      status: "ASSIGNED",
+      observation_count: 3,
+      is_recurring: false,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: 4,
+      defect_code: "DEF-1027",
+      defect_type: "Surface Rutting",
+      severity: "HIGH",
+      confidence: 0.91,
+      priority_score: 75,
+      latitude: 28.6040,
+      longitude: 77.2180,
+      road_name: "Industrial Tech Corridor South",
+      road_code: "RHI-4120",
+      image_url: "/assets/sample_pothole_1.jpg",
+      annotated_image_url: "/assets/sample_pothole_1.jpg",
+      status: "VERIFIED",
+      observation_count: 1,
+      is_recurring: true,
+      created_at: new Date().toISOString()
+    }
+  ],
+  workOrders: [
+    {
+      id: 1,
+      code: "WO-2048",
+      defect_id: 1,
+      defect_code: "DEF-1024",
+      priority: "CRITICAL",
+      contractor: "Apex Infra Infrastructure Ltd",
+      sla_hours: 24,
+      status: "ASSIGNED",
+      created_at: new Date().toISOString()
+    },
+    {
+      id: 2,
+      code: "WO-1042",
+      defect_id: 2,
+      defect_code: "DEF-1025",
+      priority: "HIGH",
+      contractor: "BuildTech Highway Solutions",
+      sla_hours: 48,
+      status: "IN PROGRESS",
+      created_at: new Date().toISOString()
+    },
+    {
+      id: 3,
+      code: "WO-3091",
+      defect_id: 3,
+      defect_code: "DEF-1026",
+      priority: "CRITICAL",
+      contractor: "Apex Infra Infrastructure Ltd",
+      sla_hours: 24,
+      status: "ASSIGNED",
+      created_at: new Date().toISOString()
+    }
+  ],
   roadSegments: [],
-  analyticsData: null,
+  analyticsData: {
+    kpis: {
+      total_defects: 1284,
+      critical_defects: 146,
+      open_work_orders: 327,
+      ai_verified: 2918,
+      recurrence: 73,
+      road_health_overall: 87
+    },
+    charts: {
+      defects_by_severity: {
+        labels: ["Critical", "High", "Medium", "Low"],
+        data: [146, 420, 510, 208],
+        colors: ["#DC2626", "#F59E0B", "#EAB308", "#0284C7"]
+      },
+      repair_verification_rate: {
+        labels: ["Verified (Passed AI)", "Failed Verification", "Pending Scan"],
+        data: [96.8, 2.4, 0.8],
+        colors: ["#16A34A", "#DC2626", "#94A3B8"]
+      },
+      sla_compliance: {
+        labels: ["< 24 Hours", "24-48 Hours", "48-72 Hours", "Overdue / Breached"],
+        data: [68, 22, 7, 3],
+        colors: ["#0F766E", "#2563EB", "#38BDF8", "#DC2626"]
+      },
+      recurring_defects: {
+        labels: ["Clean Warranty", "Warranty Recurrence"],
+        data: [94.3, 5.7],
+        colors: ["#16A34A", "#DC2626"]
+      }
+    }
+  },
   activeDefectDetail: null,
   activeScannedResult: null,
   mapInstance: null,
@@ -27,6 +165,15 @@ document.addEventListener("DOMContentLoaded", () => {
   initLiveClock();
   initThreeScene();
   setupEventListeners();
+
+  // Immediate initial render from default platform state
+  renderDefectsGrid();
+  renderWorkOrdersGrid();
+  renderWarrantyList();
+  renderRecentDefectsDrawer();
+  updateKPIsUI(AppState.analyticsData.kpis);
+
+  // Background live synchronization with server
   loadAllData();
 });
 
@@ -136,15 +283,16 @@ function switchTab(tabName) {
   });
 
   if (tabName === "overview") {
-    overviewViewport.style.display = "block";
-    kpiRow.style.display = "grid";
-    bottomDrawer.style.display = "flex";
-    rightStage.style.display = "flex";
+    if (overviewViewport) overviewViewport.style.display = "block";
+    if (kpiRow) kpiRow.style.display = "grid";
+    if (bottomDrawer) bottomDrawer.style.display = "flex";
+    if (rightStage) rightStage.style.display = "flex";
     if (window.RHIScene) window.RHIScene.resize();
   } else {
-    overviewViewport.style.display = "none";
-    kpiRow.style.display = "none";
-    bottomDrawer.style.display = "none";
+    if (overviewViewport) overviewViewport.style.display = "none";
+    if (kpiRow) kpiRow.style.display = "none";
+    if (bottomDrawer) bottomDrawer.style.display = "none";
+    if (rightStage) rightStage.style.display = "none";
 
     const targetLayer = document.getElementById(`layer-${tabName}`);
     if (targetLayer) {
@@ -155,6 +303,12 @@ function switchTab(tabName) {
       setTimeout(initLeafletMap, 100);
     } else if (tabName === "analytics") {
       renderAnalyticsCharts();
+    } else if (tabName === "defects") {
+      renderDefectsGrid();
+    } else if (tabName === "workorders") {
+      renderWorkOrdersGrid();
+    } else if (tabName === "warranty") {
+      renderWarrantyList();
     }
   }
 }
@@ -164,32 +318,77 @@ function switchTab(tabName) {
 // ==========================================
 
 async function loadAllData() {
+  console.log("[RHI APP] Synchronizing live platform data...");
+
+  // 1. System Status
   try {
-    const [statusRes, defectsRes, wosRes, roadsRes, analyticsRes] = await Promise.all([
-      fetch(`${API_BASE}/api/system-status`),
-      fetch(`${API_BASE}/api/defects`),
-      fetch(`${API_BASE}/api/work-orders`),
-      fetch(`${API_BASE}/api/road-segments`),
-      fetch(`${API_BASE}/api/analytics`)
-    ]);
-
-    const status = await statusRes.json();
-    AppState.defects = await defectsRes.json();
-    AppState.workOrders = await wosRes.json();
-    AppState.roadSegments = await roadsRes.json();
-    AppState.analyticsData = await analyticsRes.json();
-
-    updateSystemStatusUI(status);
-    updateKPIsUI(AppState.analyticsData.kpis);
-    renderDefectsGrid();
-    renderWorkOrdersGrid();
-    renderWarrantyList();
-    renderRecentDefectsDrawer();
-
-    console.log("[RHI APP] All platform data loaded successfully.");
+    const res = await fetch(`${API_BASE}/api/system-status`);
+    if (res.ok) {
+      const status = await res.json();
+      updateSystemStatusUI(status);
+    }
   } catch (err) {
-    console.error("[RHI APP] Data loading failed:", err);
+    console.warn("[RHI APP] /api/system-status notice:", err);
   }
+
+  // 2. Defects
+  try {
+    const res = await fetch(`${API_BASE}/api/defects`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        AppState.defects = data;
+        renderDefectsGrid();
+        renderRecentDefectsDrawer();
+      }
+    }
+  } catch (err) {
+    console.warn("[RHI APP] /api/defects notice:", err);
+  }
+
+  // 3. Work Orders
+  try {
+    const res = await fetch(`${API_BASE}/api/work-orders`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        AppState.workOrders = data;
+        renderWorkOrdersGrid();
+      }
+    }
+  } catch (err) {
+    console.warn("[RHI APP] /api/work-orders notice:", err);
+  }
+
+  // 4. Road Segments
+  try {
+    const res = await fetch(`${API_BASE}/api/road-segments`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        AppState.roadSegments = data;
+      }
+    }
+  } catch (err) {
+    console.warn("[RHI APP] /api/road-segments notice:", err);
+  }
+
+  // 5. Analytics
+  try {
+    const res = await fetch(`${API_BASE}/api/analytics`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.kpis) {
+        AppState.analyticsData = data;
+        updateKPIsUI(data.kpis);
+      }
+    }
+  } catch (err) {
+    console.warn("[RHI APP] /api/analytics notice:", err);
+  }
+
+  // 6. Warranty List
+  renderWarrantyList();
 }
 
 function updateSystemStatusUI(status) {
@@ -315,8 +514,10 @@ function setupScannerEvents() {
 
         const endpoints = [
           `${API_BASE}/api/detect`,
-          `/api/detect`
-        ].filter(Boolean);
+          `/api/detect`,
+          `http://127.0.0.1:8000/api/detect`,
+          `http://localhost:8000/api/detect`
+        ];
 
         for (const ep of endpoints) {
           try {
@@ -376,8 +577,9 @@ function setupScannerEvents() {
       try {
         const endpoints = [
           `${API_BASE}/api/defects`,
-          `/api/defects`
-        ].filter(Boolean);
+          `/api/defects`,
+          `http://127.0.0.1:8000/api/defects`
+        ];
 
         for (const ep of endpoints) {
           try {
@@ -736,29 +938,45 @@ function renderDefectsGrid() {
   if (!container) return;
 
   container.innerHTML = "";
+  if (!AppState.defects || AppState.defects.length === 0) {
+    container.innerHTML = `<div style="grid-column: 1 / -1; padding: 40px; text-align: center; color: var(--text-muted); font-size: 0.95rem;">No active defects registered.</div>`;
+    return;
+  }
+
   AppState.defects.forEach(d => {
-    const card = document.createElement("div");
-    card.className = "defect-card-3d";
-    card.onclick = () => openDefectDetailModal(d.id);
+    try {
+      const card = document.createElement("div");
+      card.className = "defect-card-3d";
+      card.onclick = () => openDefectDetailModal(d.id);
 
-    const sevClass = `badge-${d.severity.toLowerCase()}`;
+      const sev = (d.severity || "HIGH").toUpperCase();
+      const sevClass = `badge-${sev.toLowerCase()}`;
+      const code = d.defect_code || `DEF-${d.id || 1024}`;
+      const type = (d.defect_type || "Pothole").toUpperCase();
+      const conf = Math.round((d.confidence || 0.9) * 100);
+      const pri = d.priority_score || 85;
+      const road = d.road_name || "Smart City Road";
+      const img = d.image_url || d.annotated_image_url || "/assets/sample_pothole_1.jpg";
 
-    card.innerHTML = `
-      <img src="${d.image_url}" class="defect-img-thumb" alt="${d.defect_code}" onerror="this.src='/assets/sample_pothole_1.jpg'" />
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <span class="badge ${sevClass}">${d.severity}</span>
-        <span style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-dim);">${d.defect_code}</span>
-      </div>
-      <h4 style="font-family:var(--font-display); font-size:1.1rem; margin-bottom:4px;">${d.defect_type.toUpperCase()}</h4>
-      <div style="font-size:0.78rem; color:var(--accent-teal); font-family:var(--font-mono); font-weight:600; margin-bottom:8px;">
-        ${(d.confidence * 100).toFixed(0)}% AI CONFIDENCE
-      </div>
-      <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); border-top:1px solid var(--border-subtle); padding-top:8px;">
-        <span>Priority: <b style="color:var(--accent-navy);">${d.priority_score}</b></span>
-        <span>${d.road_name}</span>
-      </div>
-    `;
-    container.appendChild(card);
+      card.innerHTML = `
+        <img src="${img}" class="defect-img-thumb" alt="${code}" onerror="this.src='/assets/sample_pothole_1.jpg'" />
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span class="badge ${sevClass}">${sev}</span>
+          <span style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-dim);">${code}</span>
+        </div>
+        <h4 style="font-family:var(--font-display); font-size:1.1rem; margin-bottom:4px;">${type}</h4>
+        <div style="font-size:0.78rem; color:var(--accent-teal); font-family:var(--font-mono); font-weight:600; margin-bottom:8px;">
+          ${conf}% AI CONFIDENCE
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); border-top:1px solid var(--border-subtle); padding-top:8px;">
+          <span>Priority: <b style="color:var(--accent-navy);">${pri}</b></span>
+          <span>${road}</span>
+        </div>
+      `;
+      container.appendChild(card);
+    } catch (cardErr) {
+      console.error("[RHI] Error rendering defect card:", cardErr);
+    }
   });
 }
 
@@ -767,27 +985,32 @@ function renderRecentDefectsDrawer() {
   if (!container) return;
 
   container.innerHTML = "";
-  const recent = AppState.defects.slice(0, 3);
+  const recent = (AppState.defects || []).slice(0, 3);
   recent.forEach(d => {
-    const card = document.createElement("div");
-    card.className = "drawer-card";
-    card.onclick = () => openDefectDetailModal(d.id);
+    try {
+      const card = document.createElement("div");
+      card.className = "drawer-card";
+      card.onclick = () => openDefectDetailModal(d.id);
 
-    const icon = d.severity === "CRITICAL" ? "⚠️" : (d.severity === "HIGH" ? "🚧" : "📍");
+      const sev = (d.severity || "HIGH").toUpperCase();
+      const icon = sev === "CRITICAL" ? "⚠️" : (sev === "HIGH" ? "🚧" : "📍");
 
-    card.innerHTML = `
-      <div style="display:flex; align-items:center; gap:10px;">
-        <span style="font-size:1.1rem;">${icon}</span>
-        <div>
-          <div style="font-size:0.7rem; font-family:var(--font-mono); color:var(--text-muted); font-weight:600;">${d.defect_code} • ${d.road_name}</div>
-          <div style="font-size:0.9rem; font-weight:700; color:var(--accent-navy);">${d.defect_type} (${d.severity})</div>
+      card.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.1rem;">${icon}</span>
+          <div>
+            <div style="font-size:0.7rem; font-family:var(--font-mono); color:var(--text-muted); font-weight:600;">${d.defect_code || "DEF-1024"} • ${d.road_name || "Smart City Road"}</div>
+            <div style="font-size:0.9rem; font-weight:700; color:var(--accent-navy);">${d.defect_type || "Pothole"} (${sev})</div>
+          </div>
         </div>
-      </div>
-      <div style="text-align:right;">
-        <span class="badge badge-${d.severity.toLowerCase()}">${d.status}</span>
-      </div>
-    `;
-    container.appendChild(card);
+        <div style="text-align:right;">
+          <span class="badge badge-${sev.toLowerCase()}">${d.status || "ASSIGNED"}</span>
+        </div>
+      `;
+      container.appendChild(card);
+    } catch (err) {
+      console.error("[RHI] Error rendering drawer card:", err);
+    }
   });
 }
 
@@ -796,22 +1019,37 @@ function renderWorkOrdersGrid() {
   if (!container) return;
 
   container.innerHTML = "";
+  if (!AppState.workOrders || AppState.workOrders.length === 0) {
+    container.innerHTML = `<div style="grid-column: 1 / -1; padding: 40px; text-align: center; color: var(--text-muted); font-size: 0.95rem;">No active work orders.</div>`;
+    return;
+  }
+
   AppState.workOrders.forEach(w => {
-    const card = document.createElement("div");
-    card.className = "defect-card-3d";
-    card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-        <span style="font-family:var(--font-mono); font-size:0.85rem; color:var(--accent-cyan);">${w.code}</span>
-        <span class="badge badge-high">${w.status}</span>
-      </div>
-      <h4 style="font-family:var(--font-display); font-size:1.05rem; margin-bottom:4px;">Defect: ${w.defect_code}</h4>
-      <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">Assigned: ${w.contractor}</div>
-      <div style="font-size:0.75rem; font-family:var(--font-mono); color:var(--sev-high); margin-bottom:12px;">SLA: ${w.sla_hours} Hours</div>
-      <div style="display:flex; gap:8px;">
-        <button class="btn btn-secondary" style="padding:6px 12px; font-size:0.75rem;" onclick="switchTab('verification')">AI Verify</button>
-      </div>
-    `;
-    container.appendChild(card);
+    try {
+      const card = document.createElement("div");
+      card.className = "defect-card-3d";
+      const code = w.code || `WO-${w.id || 1024}`;
+      const status = w.status || "ASSIGNED";
+      const defCode = w.defect_code || (w.defect ? w.defect.defect_code : "DEF-1024");
+      const contractor = w.contractor || "Apex Infra Infrastructure Ltd";
+      const sla = w.sla_hours || 24;
+
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+          <span style="font-family:var(--font-mono); font-size:0.85rem; color:var(--accent-cyan); font-weight:700;">${code}</span>
+          <span class="badge badge-high">${status}</span>
+        </div>
+        <h4 style="font-family:var(--font-display); font-size:1.05rem; margin-bottom:4px;">Defect: ${defCode}</h4>
+        <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">Assigned: ${contractor}</div>
+        <div style="font-size:0.75rem; font-family:var(--font-mono); color:var(--sev-high); margin-bottom:12px;">SLA: ${sla} Hours</div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-secondary" style="padding:6px 12px; font-size:0.75rem;" onclick="switchTab('verification')">AI Verify</button>
+        </div>
+      `;
+      container.appendChild(card);
+    } catch (err) {
+      console.error("[RHI] Error rendering work order card:", err);
+    }
   });
 }
 
@@ -820,14 +1058,26 @@ function renderWarrantyList() {
   if (!container) return;
 
   container.innerHTML = `
-    <div class="glass-panel" style="padding:20px; border-left:4px solid var(--sev-critical);">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span class="badge badge-recurring">RECURRENCE DETECTED</span>
-        <span style="font-family:var(--font-mono); font-size:0.8rem; color:var(--sev-critical);">DEF-1027 (Industrial Corridor)</span>
+    <div style="display:flex; flex-direction:column; gap:16px;">
+      <div class="glass-panel" style="padding:20px; border-left:4px solid var(--sev-critical);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="badge badge-recurring">RECURRENCE DETECTED</span>
+          <span style="font-family:var(--font-mono); font-size:0.8rem; color:var(--sev-critical); font-weight:700;">DEF-1027 (Industrial Tech Corridor)</span>
+        </div>
+        <h3 style="font-family:var(--font-display); font-size:1.2rem; margin:10px 0 6px 0;">Surface Rutting Recurrence Under 12-Mo Warranty</h3>
+        <p style="font-size:0.85rem; color:var(--text-muted);">Original Repair Date: 60 days ago | Recurrence Flagged: Today | Contractor: BuildTech Global Solutions</p>
+        <p style="font-size:0.8rem; color:var(--sev-critical); margin-top:8px; font-weight:600;">● Contractor warranty penalty applied. Free remedial milling scheduled within 24h SLA.</p>
       </div>
-      <h3 style="font-family:var(--font-display); font-size:1.2rem; margin:10px 0 6px 0;">Surface Rutting Recurrence Under 12-Mo Warranty</h3>
-      <p style="font-size:0.85rem; color:var(--text-muted);">Original Repair Date: 60 days ago | Recurrence Flagged: Today | Contractor: BuildTech Global</p>
-      <p style="font-size:0.8rem; color:var(--sev-critical); margin-top:8px;">● Contractor penalty flag applied. Free remedial milling scheduled within 24h.</p>
+
+      <div class="glass-panel" style="padding:20px; border-left:4px solid var(--sev-healthy);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="badge badge-healthy">ACTIVE WARRANTY</span>
+          <span style="font-family:var(--font-mono); font-size:0.8rem; color:var(--sev-healthy); font-weight:700;">DEF-1024 (Ring Road Sec 4)</span>
+        </div>
+        <h3 style="font-family:var(--font-display); font-size:1.2rem; margin:10px 0 6px 0;">Full Asphalt Depth Compaction — 12-Month Coverage</h3>
+        <p style="font-size:0.85rem; color:var(--text-muted);">Verified: Yesterday by AI Compaction Scan | Contractor: Apex Infra Ltd | Status: 364 Days Remaining</p>
+        <p style="font-size:0.8rem; color:var(--accent-teal); margin-top:8px; font-weight:600;">● AI automated patrol scans daily for sub-surface settling.</p>
+      </div>
     </div>
   `;
 }

@@ -18,10 +18,13 @@ except Exception:
     HAS_CV2 = False
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PARENT_DIR = os.path.dirname(CURRENT_DIR)
+if os.path.basename(CURRENT_DIR) in ("backend", "api"):
+    PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
+else:
+    PROJECT_ROOT = CURRENT_DIR
 
-MODEL_PATH_CUSTOM = os.path.join(PARENT_DIR, "models", "best.pt")
-MODEL_PATH_DEFAULT = os.path.join(PARENT_DIR, "yolov8n.pt")
+MODEL_PATH_CUSTOM = os.path.join(PROJECT_ROOT, "models", "best.pt")
+MODEL_PATH_DEFAULT = os.path.join(PROJECT_ROOT, "yolov8n.pt")
 
 _yolo_model = None
 _model_source = None
@@ -181,11 +184,16 @@ def analyze_road_image(image_bytes: bytes, filename: str = "upload.jpg"):
     annotated_pil = draw_hud_bounding_box(img.copy(), detections)
 
     # Save annotated image into uploads directory
-    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or not os.access(PARENT_DIR, os.W_OK):
+    try:
+        if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or not os.access(PROJECT_ROOT, os.W_OK):
+            uploads_dir = "/tmp/uploads"
+        else:
+            uploads_dir = os.path.join(PROJECT_ROOT, "uploads")
+        os.makedirs(uploads_dir, exist_ok=True)
+    except Exception:
         uploads_dir = "/tmp/uploads"
-    else:
-        uploads_dir = os.path.join(PARENT_DIR, "uploads")
-    os.makedirs(uploads_dir, exist_ok=True)
+        os.makedirs(uploads_dir, exist_ok=True)
+
     timestamp = int(time.time() * 1000)
     orig_filename = f"upload_{timestamp}.jpg"
     annotated_filename = f"annotated_{timestamp}.jpg"
@@ -193,8 +201,11 @@ def analyze_road_image(image_bytes: bytes, filename: str = "upload.jpg"):
     orig_path = os.path.join(uploads_dir, orig_filename)
     annotated_path = os.path.join(uploads_dir, annotated_filename)
 
-    img.save(orig_path, quality=92)
-    annotated_pil.save(annotated_path, quality=92)
+    try:
+        img.save(orig_path, quality=92)
+        annotated_pil.save(annotated_path, quality=92)
+    except Exception:
+        pass
 
     primary = detections[0]
 

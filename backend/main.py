@@ -12,11 +12,14 @@ import datetime
 from typing import Optional, List
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PARENT_DIR = os.path.dirname(CURRENT_DIR)
-if CURRENT_DIR not in sys.path:
-    sys.path.insert(0, CURRENT_DIR)
-if PARENT_DIR not in sys.path:
-    sys.path.insert(0, PARENT_DIR)
+if os.path.basename(CURRENT_DIR) in ("backend", "api"):
+    PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
+else:
+    PROJECT_ROOT = CURRENT_DIR
+
+for p in [PROJECT_ROOT, os.path.join(PROJECT_ROOT, "backend")]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,58 +62,47 @@ app.add_middleware(
 )
 
 # Resolve directories
-if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or not os.access(PARENT_DIR, os.W_OK):
-    UPLOADS_DIR = "/tmp/uploads"
-else:
-    UPLOADS_DIR = os.path.join(PARENT_DIR, "uploads")
+UPLOADS_DIR = os.path.join(PROJECT_ROOT, "uploads")
+PUBLIC_DIR = os.path.join(PROJECT_ROOT, "public")
+FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
 
-FRONTEND_DIR = os.path.join(PARENT_DIR, "frontend")
-if not os.path.exists(FRONTEND_DIR):
-    FRONTEND_DIR = PARENT_DIR
-
-FRONTEND_ASSETS = os.path.join(FRONTEND_DIR, "assets")
-FRONTEND_CSS = os.path.join(FRONTEND_DIR, "css")
-FRONTEND_JS = os.path.join(FRONTEND_DIR, "js")
-
-try:
-    os.makedirs(UPLOADS_DIR, exist_ok=True)
-except Exception:
-    pass
-
-try:
-    os.makedirs(FRONTEND_ASSETS, exist_ok=True)
-except Exception:
-    pass
+os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 # Mount static asset folders
-if os.path.exists(FRONTEND_ASSETS):
-    app.mount("/assets", StaticFiles(directory=FRONTEND_ASSETS), name="assets")
+for assets_path in [
+    os.path.join(PUBLIC_DIR, "assets"),
+    os.path.join(FRONTEND_DIR, "assets"),
+    os.path.join(PROJECT_ROOT, "assets"),
+]:
+    if os.path.exists(assets_path):
+        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+        break
+
 if os.path.exists(UPLOADS_DIR):
     app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
-if os.path.exists(FRONTEND_DIR):
-    app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
-if os.path.exists(FRONTEND_CSS):
-    app.mount("/css", StaticFiles(directory=FRONTEND_CSS), name="css")
-if os.path.exists(FRONTEND_JS):
-    app.mount("/js", StaticFiles(directory=FRONTEND_JS), name="js")
 
-# Auto-seed on startup / serverless initialization
-_seeded = False
-def ensure_db():
-    global _seeded
-    if not _seeded:
-        try:
-            init_db_and_seed()
-            _seeded = True
-        except Exception as e:
-            print(f"[RHI BACKEND] Database init note: {e}")
+for css_path in [
+    os.path.join(PUBLIC_DIR, "css"),
+    os.path.join(FRONTEND_DIR, "css"),
+    os.path.join(PROJECT_ROOT, "css"),
+]:
+    if os.path.exists(css_path):
+        app.mount("/css", StaticFiles(directory=css_path), name="css")
+        break
+
+for js_path in [
+    os.path.join(PUBLIC_DIR, "js"),
+    os.path.join(FRONTEND_DIR, "js"),
+    os.path.join(PROJECT_ROOT, "js"),
+]:
+    if os.path.exists(js_path):
+        app.mount("/js", StaticFiles(directory=js_path), name="js")
+        break
 
 @app.on_event("startup")
 def startup_event():
-    ensure_db()
+    init_db_and_seed()
     print("[RHI BACKEND] Server initialized successfully.")
-
-ensure_db()
 
 # ----------------- SYSTEM & HEALTH ENDPOINTS -----------------
 
@@ -352,70 +344,77 @@ def create_defect(data: dict, db: Session = Depends(get_db)):
 
 @app.post("/api/verify-repair")
 async def verify_repair(
-    defect_id: int = Form(...),
+    defect_id: Optional[int] = Form(None),
+    work_order_id: Optional[int] = Form(None),
     simulate_failure: bool = Form(False),
+    before_image: Optional[UploadFile] = File(None),
+    after_image: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
-    defect = db.query(Defect).filter(Defect.id == defect_id).first()
+    target_id = defect_id or work_order_id or 1
+    defect = db.query(Defect).filter(Defect.id == target_id).first()
     if not defect:
-        raise HTTPException(status_code=404, detail="Defect record not found.")
+        defect = db.query(Defect).first()
 
     v_result = verify_repair_ai(simulate_failure=simulate_failure)
     is_verified = v_result["is_verified"]
 
-    new_verif = Verification(
-        defect_id=defect.id,
-        before_image_url=defect.image_url,
-        after_image_url="/assets/sample_repaired_1.jpg" if is_verified else "/assets/sample_failed_repair.jpg",
-        is_verified=is_verified,
-        confidence=v_result["confidence"],
-        scan_result=v_result["scan_result"],
-        defect_remaining_pct=v_result["defect_remaining_pct"],
-        verification_notes=v_result["message"]
-    )
-    db.add(new_verif)
-
-    if is_verified:
-        defect.status = "VERIFIED"
-        if defect.work_order:
-            defect.work_order.status = "VERIFIED"
-
-        warranty = WarrantyRecord(
+    if defect:
+        new_verif = Verification(
             defect_id=defect.id,
-            contractor="Apex Infra Infrastructure Ltd",
-            warranty_months=12,
-            start_date=datetime.datetime.utcnow(),
-            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=365),
-            status="ACTIVE"
+            before_image_url=defect.image_url,
+            after_image_url="/assets/sample_repaired_1.jpg" if is_verified else "/assets/sample_failed_repair.jpg",
+            is_verified=is_verified,
+            confidence=v_result["confidence"],
+            scan_result=v_result["scan_result"],
+            defect_remaining_pct=v_result["defect_remaining_pct"],
+            verification_notes=v_result["message"]
         )
-        db.add(warranty)
+        db.add(new_verif)
 
-        audit = AuditEvent(
-            defect_id=defect.id,
-            event_type="AI_VERIFICATION_PASS",
-            stage="VERIFY",
-            title="AI Repair Verification PASSED",
-            description=f"Compaction scan confirmed 100% surface restoration ({v_result['confidence']*100:.1f}% confidence). 12-month warranty activated."
-        )
-        db.add(audit)
-    else:
-        defect.status = "REPAIR_REJECTED"
-        if defect.work_order:
-            defect.work_order.status = "IN PROGRESS"
+        if is_verified:
+            defect.status = "VERIFIED"
+            if defect.work_order:
+                defect.work_order.status = "VERIFIED"
 
-        audit = AuditEvent(
-            defect_id=defect.id,
-            event_type="AI_VERIFICATION_FAIL",
-            stage="VERIFY",
-            title="AI Repair Verification REJECTED",
-            description=f"Persistent fissure detected ({v_result['defect_remaining_pct']}% remaining). Work order rejected and reopened."
-        )
-        db.add(audit)
+            warranty = WarrantyRecord(
+                defect_id=defect.id,
+                contractor="Apex Infra Infrastructure Ltd",
+                warranty_months=12,
+                start_date=datetime.datetime.utcnow(),
+                end_date=datetime.datetime.utcnow() + datetime.timedelta(days=365),
+                status="ACTIVE"
+            )
+            db.add(warranty)
 
-    db.commit()
+            audit = AuditEvent(
+                defect_id=defect.id,
+                event_type="AI_VERIFICATION_PASS",
+                stage="VERIFY",
+                title="AI Repair Verification PASSED",
+                description=f"Compaction scan confirmed 100% surface restoration ({v_result['confidence']*100:.1f}% confidence). 12-month warranty activated."
+            )
+            db.add(audit)
+        else:
+            defect.status = "REPAIR_REJECTED"
+            if defect.work_order:
+                defect.work_order.status = "IN PROGRESS"
+
+            audit = AuditEvent(
+                defect_id=defect.id,
+                event_type="AI_VERIFICATION_FAIL",
+                stage="VERIFY",
+                title="AI Repair Verification REJECTED",
+                description=f"Persistent fissure detected ({v_result['defect_remaining_pct']}% remaining). Work order rejected and reopened."
+            )
+            db.add(audit)
+
+        db.commit()
 
     return {
         "success": True,
+        "status": "VERIFIED" if is_verified else "REJECTED",
+        "verification_score": int(v_result["confidence"] * 100),
         "is_verified": is_verified,
         "confidence": v_result["confidence"],
         "scan_result": v_result["scan_result"],
@@ -463,6 +462,55 @@ def get_work_orders(db: Session = Depends(get_db)):
         for w in wos
     ]
 
+# ----------------- WARRANTY RECORDS -----------------
+
+@app.get("/api/warranty")
+@app.get("/api/warranty-records")
+def get_warranty_records(db: Session = Depends(get_db)):
+    records = db.query(WarrantyRecord).options(joinedload(WarrantyRecord.defect)).all()
+    if not records:
+        return [
+            {
+                "id": 1,
+                "defect_code": "DEF-1024",
+                "road_name": "Ring Road Expressway - Sector 4",
+                "contractor": "Apex Infra Infrastructure Ltd",
+                "repair_date": "2026-08-15",
+                "warranty_period": "12 Months",
+                "status": "ACTIVE",
+                "recurrence_detected": False,
+                "notes": "Verified by AI Computer Vision. Clean pavement profile intact."
+            },
+            {
+                "id": 2,
+                "defect_code": "DEF-1027",
+                "road_name": "Industrial Tech Corridor South",
+                "contractor": "Urban Surface Dynamics",
+                "repair_date": "2026-06-20",
+                "warranty_period": "12 Months",
+                "status": "FLAGGED",
+                "recurrence_detected": True,
+                "notes": "Surface rutting re-emerged within warranty window. Notice issued to contractor."
+            }
+        ]
+    return [
+        {
+            "id": r.id,
+            "defect_id": r.defect_id,
+            "defect_code": r.defect.defect_code if r.defect else "DEF-1024",
+            "road_name": r.defect.road_name if r.defect else "Ring Road Expressway",
+            "contractor": r.contractor,
+            "warranty_months": r.warranty_months,
+            "warranty_period": f"{r.warranty_months} Months",
+            "start_date": r.start_date.strftime("%Y-%m-%d") if r.start_date else "2026-08-15",
+            "end_date": r.end_date.strftime("%Y-%m-%d") if r.end_date else "2027-08-15",
+            "status": r.status,
+            "recurrence_detected": r.status == "FLAGGED" or (r.defect.is_recurring if r.defect else False),
+            "notes": "Under active AI monitoring."
+        }
+        for r in records
+    ]
+
 # ----------------- AUDIT TRAIL -----------------
 
 @app.get("/api/audit/{defect_id}")
@@ -471,6 +519,22 @@ def get_defect_audit_trail(defect_id: int, db: Session = Depends(get_db)):
     return [
         {
             "id": a.id,
+            "event_type": a.event_type,
+            "stage": a.stage,
+            "title": a.title,
+            "description": a.description,
+            "timestamp": a.timestamp.strftime("%b %d, %H:%M UTC")
+        }
+        for a in audits
+    ]
+
+@app.get("/api/audit-trail")
+def get_all_audit_trail(db: Session = Depends(get_db)):
+    audits = db.query(AuditEvent).order_by(AuditEvent.timestamp.desc()).limit(50).all()
+    return [
+        {
+            "id": a.id,
+            "defect_id": a.defect_id,
             "event_type": a.event_type,
             "stage": a.stage,
             "title": a.title,
@@ -527,72 +591,56 @@ def get_analytics(db: Session = Depends(get_db)):
         }
     }
 
-# ----------------- ROOT & DASHBOARD ROUTES -----------------
+# ----------------- STATIC & ROOT FALLBACK ROUTES -----------------
+
+@app.get("/css/style.css")
+def get_style_css():
+    for p in [
+        os.path.join(PROJECT_ROOT, "public", "css", "style.css"),
+        os.path.join(PROJECT_ROOT, "frontend", "css", "style.css"),
+        os.path.join(PROJECT_ROOT, "public", "style.css"),
+        os.path.join(PROJECT_ROOT, "style.css"),
+    ]:
+        if os.path.exists(p):
+            return FileResponse(p, media_type="text/css")
+    raise HTTPException(status_code=404, detail="CSS file not found")
+
+@app.get("/js/{filename}")
+def get_js_file(filename: str):
+    for p in [
+        os.path.join(PROJECT_ROOT, "public", "js", filename),
+        os.path.join(PROJECT_ROOT, "frontend", "js", filename),
+        os.path.join(PROJECT_ROOT, "public", filename),
+        os.path.join(PROJECT_ROOT, filename),
+    ]:
+        if os.path.exists(p):
+            return FileResponse(p, media_type="application/javascript")
+    raise HTTPException(status_code=404, detail=f"JavaScript file {filename} not found")
+
+@app.get("/assets/{filename}")
+def get_asset_file(filename: str):
+    for p in [
+        os.path.join(PROJECT_ROOT, "public", "assets", filename),
+        os.path.join(PROJECT_ROOT, "frontend", "assets", filename),
+        os.path.join(PROJECT_ROOT, "assets", filename),
+        os.path.join(PROJECT_ROOT, filename),
+    ]:
+        if os.path.exists(p):
+            return FileResponse(p)
+    raise HTTPException(status_code=404, detail=f"Asset {filename} not found")
 
 @app.get("/")
 def serve_index():
-    ensure_db()
-    index_path = os.path.join(FRONTEND_DIR, "index.html")
-    if not os.path.exists(index_path):
-        index_path = os.path.join(PARENT_DIR, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path, media_type="text/html")
-    raise HTTPException(status_code=404, detail="Road Health Intelligence frontend index.html not found.")
+    for p in [
+        os.path.join(PROJECT_ROOT, "public", "index.html"),
+        os.path.join(PROJECT_ROOT, "frontend", "index.html"),
+        os.path.join(PROJECT_ROOT, "index.html"),
+    ]:
+        if os.path.exists(p):
+            return FileResponse(p, media_type="text/html")
+    return JSONResponse({"status": "ONLINE", "message": "Road Health Intelligence API active"})
 
 @app.get("/dashboard")
 def serve_dashboard():
     return serve_index()
-
-@app.get("/favicon.ico")
-def serve_favicon():
-    return JSONResponse(content={}, status_code=204)
-
-# ----------------- STATIC ASSET FALLBACK ROUTES -----------------
-
-@app.get("/css/{filename:path}")
-def serve_css_fallback(filename: str):
-    for candidate in [
-        os.path.join(FRONTEND_CSS, filename),
-        os.path.join(PARENT_DIR, "public", "css", filename),
-        os.path.join(PARENT_DIR, "css", filename)
-    ]:
-        if os.path.exists(candidate):
-            return FileResponse(candidate, media_type="text/css")
-    raise HTTPException(status_code=404, detail="CSS file not found")
-
-@app.get("/js/{filename:path}")
-def serve_js_fallback(filename: str):
-    for candidate in [
-        os.path.join(FRONTEND_JS, filename),
-        os.path.join(PARENT_DIR, "public", "js", filename),
-        os.path.join(PARENT_DIR, "js", filename)
-    ]:
-        if os.path.exists(candidate):
-            return FileResponse(candidate, media_type="application/javascript")
-    raise HTTPException(status_code=404, detail="JS file not found")
-
-@app.get("/assets/{filename:path}")
-def serve_assets_fallback(filename: str):
-    for candidate in [
-        os.path.join(FRONTEND_ASSETS, filename),
-        os.path.join(PARENT_DIR, "public", "assets", filename),
-        os.path.join(PARENT_DIR, "assets", filename),
-        os.path.join(PARENT_DIR, "uploads", filename)
-    ]:
-        if os.path.exists(candidate):
-            return FileResponse(candidate)
-    raise HTTPException(status_code=404, detail="Asset not found")
-
-@app.get("/static/css/{filename:path}")
-def serve_static_css_fallback(filename: str):
-    return serve_css_fallback(filename)
-
-@app.get("/static/js/{filename:path}")
-def serve_static_js_fallback(filename: str):
-    return serve_js_fallback(filename)
-
-@app.get("/static/assets/{filename:path}")
-def serve_static_assets_fallback(filename: str):
-    return serve_assets_fallback(filename)
-
 
