@@ -1772,8 +1772,21 @@ html, body {
     font-size: 0.84rem !important;
   }
   .feature-media-box {
-    height: 190px !important;
+    height: auto !important;
     max-width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: var(--bg-surface-subtle) !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+  }
+  .feature-media-box img {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 280px !important;
+    object-fit: contain !important;
+    display: block !important;
   }
   .differentiator-box {
     padding: 20px 12px !important;
