@@ -830,6 +830,7 @@ window.RHIScene = (function () {
   return {
     init: init,
     switchView: switchView,
+    setMode: switchView,
     setCameraForHero: setCameraForHero,
     setCameraForDashboard: setCameraForDashboard,
     resize: onWindowResize

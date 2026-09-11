@@ -276,12 +276,12 @@ function switchView(viewName) {
   if (viewName === "dashboard") {
     if (landingView) landingView.classList.add("hidden");
     if (dashView) dashView.classList.add("active");
-    if (window.RHIScene) window.RHIScene.setMode("dashboard");
+    if (window.RHIScene) window.RHIScene.switchView("dashboard");
     switchTab("overview");
   } else {
     if (dashView) dashView.classList.remove("active");
     if (landingView) landingView.classList.remove("hidden");
-    if (window.RHIScene) window.RHIScene.setMode("hero");
+    if (window.RHIScene) window.RHIScene.switchView("hero");
   }
 }
 
@@ -313,7 +313,10 @@ function switchTab(tabName) {
     if (kpiRow) kpiRow.style.display = "grid";
     if (bottomDrawer) bottomDrawer.style.display = "flex";
     if (rightStage) rightStage.style.display = "flex";
-    if (window.RHIScene) window.RHIScene.resize();
+    if (window.RHIScene) {
+      window.RHIScene.switchView("dashboard");
+      window.RHIScene.resize();
+    }
     if (AppState.analyticsData && AppState.analyticsData.kpis) {
       updateKPIsUI(AppState.analyticsData.kpis);
     }
