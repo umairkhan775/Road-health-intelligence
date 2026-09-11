@@ -201,6 +201,49 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Background live synchronization with server
   loadAllData();
+
+  // Check initial route from URL hash or pathname
+  const initialHash = window.location.hash.replace("#", "").toLowerCase();
+  const initialPath = window.location.pathname.toLowerCase();
+
+  if (initialPath === "/dashboard" || initialPath.startsWith("/dashboard") || initialHash === "dashboard" || ["overview", "scanner", "defects", "map", "workorders", "verification", "warranty", "analytics", "audit"].includes(initialHash)) {
+    switchView("dashboard", false);
+    if (["overview", "scanner", "defects", "map", "workorders", "verification", "warranty", "analytics", "audit"].includes(initialHash)) {
+      switchTab(initialHash, false);
+    } else {
+      switchTab("overview", false);
+    }
+  }
+});
+
+// Browser history Back / Forward button handler (Dashboard -> Back -> Homepage)
+window.addEventListener("popstate", (e) => {
+  const hash = window.location.hash.replace("#", "").toLowerCase();
+  const path = window.location.pathname.toLowerCase();
+
+  if (e.state && e.state.view) {
+    if (e.state.view === "dashboard") {
+      switchView("dashboard", false);
+      if (e.state.tab) switchTab(e.state.tab, false);
+    } else {
+      switchView("landing", false);
+    }
+  } else if (hash === "home" || hash === "" || hash === "landing") {
+    if (path === "/dashboard") {
+      switchView("dashboard", false);
+      switchTab("overview", false);
+    } else {
+      switchView("landing", false);
+    }
+  } else {
+    switchView("dashboard", false);
+    const validTabs = ["overview", "scanner", "defects", "map", "workorders", "verification", "warranty", "analytics", "audit"];
+    if (validTabs.includes(hash)) {
+      switchTab(hash, false);
+    } else {
+      switchTab("overview", false);
+    }
+  }
 });
 
 function initThreeScene() {
@@ -228,24 +271,40 @@ function initLiveClock() {
 }
 
 function setupEventListeners() {
-  // Navigation: Enter Command Center
+  // Navigation: Enter Command Center & Scan
   const enterBtn = document.getElementById("btn-enter-command");
   const scanHeroBtn = document.getElementById("btn-hero-scan");
   const brandHeroBtn = document.getElementById("btn-brand-home");
   const navHomeBtn = document.getElementById("nav-btn-home");
 
-  if (enterBtn) enterBtn.addEventListener("click", () => switchView("dashboard"));
+  if (enterBtn) {
+    enterBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchView("dashboard");
+    });
+  }
+
   if (scanHeroBtn) {
-    scanHeroBtn.addEventListener("click", () => {
+    scanHeroBtn.addEventListener("click", (e) => {
+      e.preventDefault();
       switchView("dashboard");
       switchTab("scanner");
     });
   }
-  if (brandHeroBtn) brandHeroBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    switchView("landing");
-  });
-  if (navHomeBtn) navHomeBtn.addEventListener("click", () => switchView("landing"));
+
+  if (brandHeroBtn) {
+    brandHeroBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchView("landing");
+    });
+  }
+
+  if (navHomeBtn) {
+    navHomeBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      switchView("landing");
+    });
+  }
 
   // Sidebar Tabs
   const navItems = document.querySelectorAll(".nav-item[data-tab]");
@@ -274,24 +333,54 @@ function setupEventListeners() {
   };
 }
 
-function switchView(viewName) {
+function switchView(viewName, updateHistory = true) {
   AppState.activeView = viewName;
   const landingView = document.getElementById("landing-view");
   const dashView = document.getElementById("dashboard-view");
 
   if (viewName === "dashboard") {
-    if (landingView) landingView.classList.add("hidden");
-    if (dashView) dashView.classList.add("active");
-    if (window.RHIScene) window.RHIScene.switchView("dashboard");
-    switchTab("overview");
+    if (landingView) {
+      landingView.classList.add("hidden");
+      landingView.style.display = "none";
+    }
+    if (dashView) {
+      dashView.classList.add("active");
+      dashView.style.display = "flex";
+    }
+    window.scrollTo(0, 0);
+
+    if (window.RHIScene) {
+      window.RHIScene.switchView("dashboard");
+      window.RHIScene.resize();
+    }
+    switchTab(AppState.currentTab || "overview", false);
+
+    if (updateHistory) {
+      history.pushState({ view: "dashboard", tab: AppState.currentTab || "overview" }, "", "#dashboard");
+    }
   } else {
-    if (dashView) dashView.classList.remove("active");
-    if (landingView) landingView.classList.remove("hidden");
-    if (window.RHIScene) window.RHIScene.switchView("hero");
+    if (dashView) {
+      dashView.classList.remove("active");
+      dashView.style.display = "none";
+    }
+    if (landingView) {
+      landingView.classList.remove("hidden");
+      landingView.style.display = "block";
+    }
+    window.scrollTo(0, 0);
+
+    if (window.RHIScene) {
+      window.RHIScene.switchView("hero");
+      window.RHIScene.resize();
+    }
+
+    if (updateHistory) {
+      history.pushState({ view: "landing" }, "", "#home");
+    }
   }
 }
 
-function switchTab(tabName) {
+function switchTab(tabName, updateHistory = true) {
   AppState.currentTab = tabName;
 
   // Update sidebar active class
@@ -361,7 +450,15 @@ function switchTab(tabName) {
       renderAuditTrailTab();
     }
   }
+
+  if (updateHistory && AppState.activeView === "dashboard") {
+    history.pushState({ view: "dashboard", tab: tabName }, "", `#${tabName}`);
+  }
 }
+
+// Global exposure for HTML inline onclick handlers
+window.switchView = switchView;
+window.switchTab = switchTab;
 
 // ==========================================
 // 2. DATA SYNCHRONIZATION
@@ -479,24 +576,6 @@ function updateKPIsUI(kpis) {
   setVal("kpi-recurrence", kpis.recurrence);
 }
 
-// ==========================================
-// 3. AI ROAD SCANNER & ANALYSIS
-// ==========================================
-
-function setupScannerEvents() {
-  const fileInput = document.getElementById("scanner-file-input");
-  const dropzone = document.getElementById("scanner-dropzone");
-  const analyzeBtn = document.getElementById("btn-run-analysis");
-  const saveDefectBtn = document.getElementById("btn-save-defect");
-  const samplePills = document.querySelectorAll(".sample-pill");
-
-  let currentFile = null;
-  let currentFileUrl = "";
-
-  if (dropzone && fileInput) {
-    dropzone.addEventListener("click", () => fileInput.click());
-    dropzone.addEventListener("dragover", (e) => {
-      e.preventDefault();
 // ==========================================
 // 3. AI ROAD SCANNER & IMAGE VALIDATION
 // ==========================================

@@ -237,6 +237,11 @@ html, body {
   transition: opacity 0.6s ease, transform 0.6s ease;
 }
 
+#landing-view.hidden,
+.hidden {
+  display: none !important;
+}
+
 #hero-canvas-container {
   position: fixed;
   top: 0;
@@ -626,18 +631,19 @@ html, body {
   height: 100vh;
   background: var(--bg-primary);
   z-index: 5;
-  display: flex;
+  display: none;
   flex-direction: column;
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.4s ease;
 }
 
 #dashboard-view.active {
-  opacity: 1;
-  pointer-events: auto;
-  z-index: 100;
+  display: flex !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  z-index: 100 !important;
 }
 
 /* Topbar */

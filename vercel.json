@@ -10,6 +10,10 @@
     {
       "source": "/dashboard",
       "destination": "/index.html"
+    },
+    {
+      "source": "/(overview|scanner|defects|map|workorders|verification|warranty|analytics|audit)",
+      "destination": "/index.html"
     }
   ]
 }

@@ -716,6 +716,15 @@ def serve_index():
     return JSONResponse({"status": "ONLINE", "message": "Road Health Intelligence API active"})
 
 @app.get("/dashboard")
+@app.get("/overview")
+@app.get("/scanner")
+@app.get("/defects")
+@app.get("/map")
+@app.get("/workorders")
+@app.get("/verification")
+@app.get("/warranty")
+@app.get("/analytics")
+@app.get("/audit")
 def serve_dashboard():
     return serve_index()
 
