@@ -1647,6 +1647,25 @@ html, body {
   line-height: 1.5;
 }
 
+/* Interactive Feature Visual Widgets */
+.interactive-feature-widget {
+  cursor: pointer;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease !important;
+}
+
+.interactive-feature-widget:hover {
+  transform: translateY(-4px) scale(1.015);
+  box-shadow: 0 16px 32px -6px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 118, 110, 0.25) !important;
+}
+
+.interactive-feature-widget:hover .interactive-visual-img {
+  transform: scale(1.04);
+}
+
+.interactive-feature-widget:active {
+  transform: translateY(-1px) scale(0.99);
+}
+
 /* Responsive & Mobile Touch (Android / iOS / Tablets) */
 @media (max-width: 1200px) {
   .dash-main-layout {
