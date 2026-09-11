@@ -782,9 +782,18 @@ window.RHIScene = (function () {
   function animate() {
     animationFrameId = requestAnimationFrame(animate);
 
-    // Guard: Only perform heavy 3D calculations and WebGL renders when container is visible
-    const activeContainer = currentViewMode === "dashboard" ? dashContainer : heroContainer;
-    const isVisible = activeContainer && activeContainer.offsetParent !== null && activeContainer.clientWidth > 0;
+    // Guard: Only perform heavy 3D calculations and WebGL renders when view is active
+    let isVisible = false;
+    if (currentViewMode === "hero") {
+      const landingEl = document.getElementById("landing-view");
+      isVisible = !landingEl || (!landingEl.classList.contains("hidden") && landingEl.style.display !== "none");
+    } else {
+      const dashEl = document.getElementById("dashboard-view");
+      const isDashActive = dashEl && dashEl.classList.contains("active") && dashEl.style.display !== "none";
+      const overviewTab = document.querySelector(".nav-item[data-tab='overview']");
+      const isOverviewActive = overviewTab && overviewTab.classList.contains("active");
+      isVisible = isDashActive && isOverviewActive;
+    }
 
     if (!isVisible) {
       return;
@@ -910,7 +919,10 @@ window.RHIScene = (function () {
       let angle = 0;
       function renderRadar() {
         requestAnimationFrame(renderRadar);
-        if (!canvas.offsetParent) return;
+        if (!canvas || canvas.clientWidth === 0 || canvas.clientHeight === 0) return;
+        const dashEl = document.getElementById("dashboard-view");
+        const overviewTab = document.querySelector(".nav-item[data-tab='overview']");
+        if (!dashEl || !dashEl.classList.contains("active") || !overviewTab || !overviewTab.classList.contains("active")) return;
         angle += 0.035;
         beamLine.rotation.y = angle;
         roadMesh.rotation.z += 0.005;
