@@ -212,7 +212,10 @@ function initThreeScene() {
   }
 }
 
+let liveClockTimer = null;
+
 function initLiveClock() {
+  if (liveClockTimer) clearInterval(liveClockTimer);
   const clockEl = document.getElementById("telemetry-clock");
   const update = () => {
     const now = new Date();
@@ -221,7 +224,7 @@ function initLiveClock() {
     }
   };
   update();
-  setInterval(update, 1000);
+  liveClockTimer = setInterval(update, 1000);
 }
 
 function setupEventListeners() {
@@ -367,102 +370,85 @@ function switchTab(tabName) {
 async function loadAllData() {
   console.log("[RHI APP] Synchronizing live platform data...");
 
-  // 1. System Status
   try {
-    const res = await fetch(`${API_BASE}/api/system-status`);
-    if (res.ok) {
-      const status = await res.json();
-      updateSystemStatusUI(status);
-    }
-  } catch (err) {
-    console.warn("[RHI APP] /api/system-status notice:", err);
-  }
+    await Promise.allSettled([
+      // 1. System Status
+      fetch(`${API_BASE}/api/system-status`)
+        .then(r => r.ok ? r.json() : null)
+        .then(status => { if (status) updateSystemStatusUI(status); })
+        .catch(err => console.warn("[RHI APP] /api/system-status notice:", err)),
 
-  // 2. Defects
-  try {
-    const res = await fetch(`${API_BASE}/api/defects`);
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        AppState.defects = data;
-        renderDefectsGrid();
-        renderRecentDefectsDrawer();
-        if (mapLayerGroups.defects) {
-          renderMapDefects();
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("[RHI APP] /api/defects notice:", err);
-  }
+      // 2. Defects
+      fetch(`${API_BASE}/api/defects`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            AppState.defects = data;
+            renderDefectsGrid();
+            renderRecentDefectsDrawer();
+            if (mapLayerGroups.defects) {
+              renderMapDefects();
+            }
+          }
+        })
+        .catch(err => console.warn("[RHI APP] /api/defects notice:", err)),
 
-  // 3. Work Orders
-  try {
-    const res = await fetch(`${API_BASE}/api/work-orders`);
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        AppState.workOrders = data;
-        renderWorkOrdersGrid();
-      }
-    }
-  } catch (err) {
-    console.warn("[RHI APP] /api/work-orders notice:", err);
-  }
+      // 3. Work Orders
+      fetch(`${API_BASE}/api/work-orders`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            AppState.workOrders = data;
+            renderWorkOrdersGrid();
+          }
+        })
+        .catch(err => console.warn("[RHI APP] /api/work-orders notice:", err)),
 
-  // 4. Road Segments
-  try {
-    const res = await fetch(`${API_BASE}/api/road-segments`);
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        AppState.roadSegments = data;
-      }
-    }
-  } catch (err) {
-    console.warn("[RHI APP] /api/road-segments notice:", err);
-  }
+      // 4. Road Segments
+      fetch(`${API_BASE}/api/road-segments`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (Array.isArray(data)) {
+            AppState.roadSegments = data;
+          }
+        })
+        .catch(err => console.warn("[RHI APP] /api/road-segments notice:", err)),
 
-  // 5. Warranty Records
-  try {
-    const res = await fetch(`${API_BASE}/api/warranty`);
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        AppState.warrantyRecords = data;
-        renderWarrantyList();
-      }
-    }
-  } catch (err) {
-    console.warn("[RHI APP] /api/warranty notice:", err);
-  }
+      // 5. Warranty Records
+      fetch(`${API_BASE}/api/warranty`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            AppState.warrantyRecords = data;
+            renderWarrantyList();
+          }
+        })
+        .catch(err => console.warn("[RHI APP] /api/warranty notice:", err)),
 
-  // 6. Audit Trail
-  try {
-    const res = await fetch(`${API_BASE}/api/audit-trail`);
-    if (res.ok) {
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        AppState.auditEvents = data;
-        renderAuditTrailTab();
-      }
-    }
-  } catch (err) {
-    console.warn("[RHI APP] /api/audit-trail notice:", err);
-  }
+      // 6. Audit Trail
+      fetch(`${API_BASE}/api/audit-trail`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            AppState.auditEvents = data;
+            renderAuditTrailTab();
+          }
+        })
+        .catch(err => console.warn("[RHI APP] /api/audit-trail notice:", err)),
 
-  // 7. Analytics
-  try {
-    const res = await fetch(`${API_BASE}/api/analytics`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.kpis) {
-        AppState.analyticsData = data;
-        updateKPIsUI(data.kpis);
-      }
-    }
+      // 7. Analytics
+      fetch(`${API_BASE}/api/analytics`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data && data.kpis) {
+            AppState.analyticsData = data;
+            updateKPIsUI(data.kpis);
+          }
+        })
+        .catch(err => console.warn("[RHI APP] /api/analytics notice:", err))
+    ]);
   } catch (err) {
-    console.warn("[RHI APP] /api/analytics notice:", err);
+    console.warn("[RHI APP] loadAllData notice:", err);
   }
 
   // Guaranteed render of active grids

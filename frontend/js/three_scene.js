@@ -742,21 +742,10 @@ window.RHIScene = (function () {
   function onMouseMove(e) {
     mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
-    if (camera) {
-      if (currentViewMode === "hero") {
-        camera.position.x = mouse.x * 22;
-        camera.position.y = 75 + mouse.y * 12;
-        camera.lookAt(0, 10, -15);
-      } else {
-        camera.position.x = -50 + mouse.x * 16;
-        camera.position.y = 115 + mouse.y * 10;
-        camera.lookAt(5, 12, 0);
-      }
-    }
   }
 
   function onCanvasClick(e) {
+    if (!renderer || e.target !== renderer.domElement) return;
     if (!raycaster || !camera) return;
     raycaster.setFromCamera(mouse, camera);
     const roadMeshes = roads.map(r => r.mesh);
@@ -775,17 +764,46 @@ window.RHIScene = (function () {
   function onWindowResize() {
     if (!camera || !renderer) return;
     const container = currentViewMode === "dashboard" ? dashContainer : heroContainer;
-    const w = container ? container.clientWidth : window.innerWidth;
-    const h = container ? container.clientHeight : window.innerHeight;
+    let w = container && container.clientWidth > 0 ? container.clientWidth : 0;
+    let h = container && container.clientHeight > 0 ? container.clientHeight : 0;
 
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    renderer.setSize(w, h);
+    if (w === 0 || h === 0) {
+      w = window.innerWidth || 800;
+      h = window.innerHeight || 600;
+    }
+
+    if (w > 0 && h > 0) {
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
   }
 
   function animate() {
     animationFrameId = requestAnimationFrame(animate);
+
+    // Guard: Only perform heavy 3D calculations and WebGL renders when container is visible
+    const activeContainer = currentViewMode === "dashboard" ? dashContainer : heroContainer;
+    const isVisible = activeContainer && activeContainer.offsetParent !== null && activeContainer.clientWidth > 0;
+
+    if (!isVisible) {
+      return;
+    }
+
     clock += 0.022;
+
+    // Smooth camera parallax from mouse position
+    if (camera) {
+      if (currentViewMode === "hero") {
+        camera.position.x = mouse.x * 22;
+        camera.position.y = 75 + mouse.y * 12;
+        camera.lookAt(0, 10, -15);
+      } else {
+        camera.position.x = -50 + mouse.x * 16;
+        camera.position.y = 115 + mouse.y * 10;
+        camera.lookAt(5, 12, 0);
+      }
+    }
 
     // 1. Animate Traffic Flow Particles
     trafficPoints.forEach((tp) => {
@@ -827,12 +845,98 @@ window.RHIScene = (function () {
     }
   }
 
+  // ==========================================
+  // MICRO 3D TELEMETRY WIDGETS
+  // ==========================================
+
+  let microVisualsInitialized = false;
+
+  function initMicroVisuals() {
+    if (microVisualsInitialized) return;
+    microVisualsInitialized = true;
+    initRadarWidget();
+  }
+
+  function initRadarWidget() {
+    const canvas = document.getElementById("telemetry-lidar-canvas");
+    if (!canvas || typeof THREE === "undefined") return;
+
+    try {
+      const w = canvas.clientWidth || 280;
+      const h = canvas.clientHeight || 130;
+      const rScene = new THREE.Scene();
+      rScene.background = new THREE.Color(0x0F172A);
+
+      const rCamera = new THREE.PerspectiveCamera(45, w / h, 0.1, 500);
+      rCamera.position.set(0, 20, 32);
+      rCamera.lookAt(0, 0, 0);
+
+      const rRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+      rRenderer.setSize(w, h);
+      rRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      // Radar grid & concentric rings
+      const polarGrid = new THREE.PolarGridHelper(16, 8, 4, 32, 0x0F766E, 0x1E293B);
+      polarGrid.position.y = -0.5;
+      rScene.add(polarGrid);
+
+      // 3D wireframe road segment
+      const roadGeo = new THREE.CylinderGeometry(12, 12, 1.2, 24, 2, true, 0, Math.PI);
+      const roadMat = new THREE.MeshBasicMaterial({ color: 0x2DD4BF, wireframe: true, transparent: true, opacity: 0.6 });
+      const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+      roadMesh.rotation.x = Math.PI / 2;
+      rScene.add(roadMesh);
+
+      // Sweeping radar beam line
+      const beamGeo = new THREE.BufferGeometry();
+      beamGeo.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 16], 3));
+      const beamMat = new THREE.LineBasicMaterial({ color: 0x38BDF8, linewidth: 2 });
+      const beamLine = new THREE.Line(beamGeo, beamMat);
+      rScene.add(beamLine);
+
+      // Blip points
+      const blipGeo = new THREE.BufferGeometry();
+      const blipPos = [
+        4, 0.2, 5,
+        -6, 0.2, 8,
+        8, 0.2, -4,
+        -3, 0.2, -6
+      ];
+      blipGeo.setAttribute("position", new THREE.Float32BufferAttribute(blipPos, 3));
+      const blipMat = new THREE.PointsMaterial({ color: 0xDC2626, size: 5, sizeAttenuation: false });
+      const blips = new THREE.Points(blipGeo, blipMat);
+      rScene.add(blips);
+
+      let angle = 0;
+      function renderRadar() {
+        requestAnimationFrame(renderRadar);
+        if (!canvas.offsetParent) return;
+        angle += 0.035;
+        beamLine.rotation.y = angle;
+        roadMesh.rotation.z += 0.005;
+        rRenderer.render(rScene, rCamera);
+      }
+      renderRadar();
+
+      window.addEventListener("resize", () => {
+        if (canvas.clientWidth && canvas.clientHeight) {
+          rCamera.aspect = canvas.clientWidth / canvas.clientHeight;
+          rCamera.updateProjectionMatrix();
+          rRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        }
+      });
+    } catch (err) {
+      console.warn("[RHI 3D] Radar visual notice:", err);
+    }
+  }
+
   return {
     init: init,
     switchView: switchView,
     setMode: switchView,
     setCameraForHero: setCameraForHero,
     setCameraForDashboard: setCameraForDashboard,
-    resize: onWindowResize
+    resize: onWindowResize,
+    initMicroVisuals: initMicroVisuals
   };
 })();

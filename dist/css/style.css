@@ -1972,15 +1972,16 @@ html, body {
   }
 
   .dash-bottom-drawer {
-    position: absolute !important;
-    bottom: 8px !important;
-    left: 8px !important;
-    right: 8px !important;
+    position: static !important;
+    margin: 8px 10px !important;
+    width: calc(100% - 20px) !important;
+    max-width: calc(100% - 20px) !important;
     display: flex;
-    gap: 6px !important;
+    gap: 8px !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
     scrollbar-width: none !important;
+    pointer-events: auto !important;
   }
   .dash-bottom-drawer::-webkit-scrollbar {
     display: none !important;

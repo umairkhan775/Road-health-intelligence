@@ -742,21 +742,10 @@ window.RHIScene = (function () {
   function onMouseMove(e) {
     mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
-    if (camera) {
-      if (currentViewMode === "hero") {
-        camera.position.x = mouse.x * 22;
-        camera.position.y = 75 + mouse.y * 12;
-        camera.lookAt(0, 10, -15);
-      } else {
-        camera.position.x = -50 + mouse.x * 16;
-        camera.position.y = 115 + mouse.y * 10;
-        camera.lookAt(5, 12, 0);
-      }
-    }
   }
 
   function onCanvasClick(e) {
+    if (!renderer || e.target !== renderer.domElement) return;
     if (!raycaster || !camera) return;
     raycaster.setFromCamera(mouse, camera);
     const roadMeshes = roads.map(r => r.mesh);
@@ -775,17 +764,46 @@ window.RHIScene = (function () {
   function onWindowResize() {
     if (!camera || !renderer) return;
     const container = currentViewMode === "dashboard" ? dashContainer : heroContainer;
-    const w = container ? container.clientWidth : window.innerWidth;
-    const h = container ? container.clientHeight : window.innerHeight;
+    let w = container && container.clientWidth > 0 ? container.clientWidth : 0;
+    let h = container && container.clientHeight > 0 ? container.clientHeight : 0;
 
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    renderer.setSize(w, h);
+    if (w === 0 || h === 0) {
+      w = window.innerWidth || 800;
+      h = window.innerHeight || 600;
+    }
+
+    if (w > 0 && h > 0) {
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
   }
 
   function animate() {
     animationFrameId = requestAnimationFrame(animate);
+
+    // Guard: Only perform heavy 3D calculations and WebGL renders when container is visible
+    const activeContainer = currentViewMode === "dashboard" ? dashContainer : heroContainer;
+    const isVisible = activeContainer && activeContainer.offsetParent !== null && activeContainer.clientWidth > 0;
+
+    if (!isVisible) {
+      return;
+    }
+
     clock += 0.022;
+
+    // Smooth camera parallax from mouse position
+    if (camera) {
+      if (currentViewMode === "hero") {
+        camera.position.x = mouse.x * 22;
+        camera.position.y = 75 + mouse.y * 12;
+        camera.lookAt(0, 10, -15);
+      } else {
+        camera.position.x = -50 + mouse.x * 16;
+        camera.position.y = 115 + mouse.y * 10;
+        camera.lookAt(5, 12, 0);
+      }
+    }
 
     // 1. Animate Traffic Flow Particles
     trafficPoints.forEach((tp) => {
