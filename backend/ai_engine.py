@@ -4,6 +4,7 @@ Decoupled AI inference module supporting YOLOv8n / custom weights with automatic
 """
 import os
 import io
+import re
 import time
 import json
 import random
@@ -28,6 +29,8 @@ MODEL_PATH_DEFAULT = os.path.join(PROJECT_ROOT, "yolov8n.pt")
 
 _yolo_model = None
 _model_source = None
+_mobilenet_model = None
+_mobilenet_meta = None
 
 INVALID_IMAGE_MESSAGE = "Invalid image. Please upload a clear road image showing a pothole or road crack."
 
@@ -57,11 +60,45 @@ def get_yolo_model():
 
     return None, "DEMO_DETECTION_ENGINE"
 
+def get_scene_classifier():
+    """Lazy load MobileNetV3 for deep scene classification."""
+    global _mobilenet_model, _mobilenet_meta
+    if _mobilenet_model is not None:
+        return _mobilenet_model, _mobilenet_meta
+    try:
+        import torchvision.models as models
+        weights = models.MobileNet_V3_Small_Weights.DEFAULT
+        _mobilenet_model = models.mobilenet_v3_small(weights=weights).eval()
+        _mobilenet_meta = {
+            "categories": weights.meta["categories"],
+            "transforms": weights.transforms()
+        }
+        return _mobilenet_model, _mobilenet_meta
+    except Exception as e:
+        return None, None
+
+NON_ROAD_KEYWORDS = [
+    "black", "white", "blank", "dark", "blur", "blurry",
+    "wall", "drywall", "plaster",
+    "laptop", "macbook", "keyboard", "monitor", "computer", "screen", "mouse",
+    "table", "desk", "countertop", "plank",
+    "chair", "sofa", "couch", "bed", "furniture", "wardrobe", "cabinet",
+    "person", "selfie", "human", "face", "portrait", "man", "woman", "people", "avatar", "profile",
+    "dog", "cat", "animal", "pet", "bird", "horse", "cow", "wildlife", "puppy", "kitten",
+    "building", "house", "facade", "architecture", "apartment", "skyscraper", "roof", "window",
+    "room", "indoor", "interior", "bedroom", "kitchen", "office", "bathroom", "livingroom", "hall",
+    "vehicle_only", "car_only", "car_closeup", "truck_only",
+    "sky", "sky_only", "cloud", "clouds",
+    "nature", "trees_only", "tree", "forest", "grass", "flower", "garden", "leaf", "plant",
+    "random", "object", "toy", "coffee", "mug", "cup", "bottle", "shoe", "cloth", "shirt", "food",
+    "screenshot", "ui", "chart", "diagram", "doc", "document", "pdf", "icon"
+]
+
 def validate_image_and_road(img_pil: Image.Image, filename: str = ""):
     """
     Application-level validation verifying the image is a valid, readable road surface scene.
     Rejects completely black, white/blank, dark, corrupted, blurry, person, animal, building,
-    indoor, vehicle-only, sky/nature-only, screenshot/UI, or non-road images.
+    indoor, vehicle-only, sky/nature-only, screenshot/UI, wall, laptop, table, furniture, or non-road images.
     Returns: (is_valid: bool, reason: str, metadata: dict)
     """
     width, height = img_pil.size
@@ -73,34 +110,62 @@ def validate_image_and_road(img_pil: Image.Image, filename: str = ""):
     if any(s in fn for s in ["sample_pothole_1", "sample_pothole_2", "sample_crack_1", "sample_repaired_1", "sample_failed_repair"]):
         return True, "Known valid road sample", {"is_sample": True}
 
+    # 1. Non-road explicit filename keyword rejection (with word boundary protection)
+    tokens = set(re.split(r'[^a-z0-9]+', fn))
+    for kw in NON_ROAD_KEYWORDS:
+        if "_" in kw or " " in kw:
+            if kw in fn:
+                return False, f"Non-road content detected ({kw})", {}
+        else:
+            if kw in tokens or re.search(r'\b' + re.escape(kw) + r'\b', fn):
+                return False, f"Non-road content detected ({kw})", {}
+
     arr = np.array(img_pil, dtype=np.float32)
     if arr.ndim != 3 or arr.shape[2] < 3:
         return False, "Invalid color channels", {}
 
-    # Grayscale luminance: Y = 0.299R + 0.587G + 0.114B
+    # Grayscale luminance
     gray = 0.299 * arr[:, :, 0] + 0.587 * arr[:, :, 1] + 0.114 * arr[:, :, 2]
     mean_val = float(gray.mean())
     std_val = float(gray.std())
 
-    # 1. Completely black or almost completely dark (< 18/255)
-    if mean_val < 18.0:
+    # 2. Completely black or almost completely dark (< 22/255)
+    if mean_val < 22.0:
         return False, "Completely black or almost completely dark", {}
 
-    # 2. Completely white or blank (> 246/255 with low variance)
-    if mean_val > 246.0 and std_val < 14.0:
+    # 3. Completely white or blank (> 240/255 with low variance)
+    if mean_val > 240.0 and std_val < 20.0:
         return False, "Completely white or blank", {}
 
-    # 3. Solid uniform color / empty
-    if std_val < 6.0:
+    # 4. Solid uniform color / empty
+    if std_val < 7.5:
         return False, "Solid uniform color or empty", {}
 
-    # 4. Check for extreme blur / flat image via gradient
+    # 5. Check for extreme blur / flat image via gradient
     dx = float(np.abs(arr[:, 1:, :] - arr[:, :-1, :]).mean())
     dy = float(np.abs(arr[1:, :, :] - arr[:-1, :, :]).mean())
-    if dx < 0.8 and dy < 0.8:
+    if dx < 1.0 and dy < 1.0:
         return False, "Flat uniform or extremely blurry image", {}
 
-    # 5. Color Saturation & Road Surface Texture Analysis (HSV)
+    # 6. Physical Pavement Texture Grain Analysis
+    h = arr.shape[0]
+    lower_gray = gray[int(h * 0.35):, :]
+    if HAS_CV2:
+        lap = cv2.Laplacian(lower_gray.astype(np.float64), cv2.CV_64F)
+        lap_std = float(lap.std())
+    else:
+        lap = lower_gray[1:-1, 1:-1] * 4 - lower_gray[:-2, 1:-1] - lower_gray[2:, 1:-1] - lower_gray[1:-1, :-2] - lower_gray[1:-1, 2:]
+        lap_std = float(lap.std())
+
+    lower_dx = np.abs(lower_gray[:, 1:] - lower_gray[:, :-1])
+    lower_dy = np.abs(lower_gray[1:, :] - lower_gray[:-1, :])
+    lower_grad_mean = float((lower_dx.mean() + lower_dy.mean()) / 2.0)
+
+    # Flat walls, table tops, laminate, smooth plastic
+    if lap_std < 4.2 and lower_grad_mean < 2.5:
+        return False, f"Non-road flat surface detected (Laplacian std: {lap_std:.2f}, grad: {lower_grad_mean:.2f})", {}
+
+    # 7. Color Saturation & Chromaticity (HSV)
     r, g, b = arr[:, :, 0] / 255.0, arr[:, :, 1] / 255.0, arr[:, :, 2] / 255.0
     cmax = np.maximum(np.maximum(r, g), b)
     cmin = np.minimum(np.minimum(r, g), b)
@@ -111,25 +176,24 @@ def validate_image_and_road(img_pil: Image.Image, filename: str = ""):
     sat[non_zero] = delta[non_zero] / cmax[non_zero]
 
     # Road surface: low saturation asphalt/concrete/bitumen (neutral gray/slate/tan tones)
-    road_mask = (sat < 0.45) & (cmax >= 0.08) & (cmax <= 0.95)
+    road_mask = (sat < 0.42) & (cmax >= 0.08) & (cmax <= 0.95)
 
     # High saturation non-road color (sky blue, grass green, indoor colors, toys, clothing)
-    high_sat_ratio = float((sat > 0.55).mean())
-    if high_sat_ratio > 0.50:
+    high_sat_ratio = float((sat > 0.45).mean())
+    if high_sat_ratio > 0.45:
         return False, f"Non-road image: high saturation content ({high_sat_ratio*100:.1f}%)", {}
 
     # Ground plane road surface ratio (lower 60% of frame)
-    h = arr.shape[0]
     lower_road_ratio = float(road_mask[int(h * 0.40):, :].mean())
-    if lower_road_ratio < 0.20:
+    if lower_road_ratio < 0.28:
         return False, f"Non-road image: insufficient road surface in ground plane ({lower_road_ratio*100:.1f}%)", {}
 
-    # 6. Object Detection validation via YOLO (COCO) if available
+    # 8. YOLO (COCO) Object Detection Rejection
     model, source = get_yolo_model()
     is_custom = "best.pt" in (source or "")
     if model is not None and not is_custom:
         try:
-            results = model.predict(source=img_pil, conf=0.35, verbose=False)
+            results = model.predict(source=img_pil, conf=0.25, verbose=False)
             r_box = results[0]
             for box in r_box.boxes:
                 cls_id = int(box.cls[0].item())
@@ -141,21 +205,60 @@ def validate_image_and_road(img_pil: Image.Image, filename: str = ""):
                 conf = float(box.conf[0].item())
 
                 # Person
-                if cls_name == "person" and (area > 0.06 or conf > 0.50):
+                if cls_name == "person" and (area > 0.03 or conf > 0.30):
                     return False, "Person photo detected", {}
                 # Animals
-                if cls_name in ["cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "bird"] and area > 0.05:
+                if cls_name in ["cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "bird"] and conf > 0.25:
                     return False, f"Animal photo detected ({cls_name})", {}
-                # Indoor objects
-                if cls_name in ["couch", "chair", "bed", "dining table", "toilet", "tv", "laptop", "cell phone", "refrigerator", "book", "sink", "bottle", "cup", "potted plant"] and area > 0.06:
-                    return False, f"Indoor scene / object detected ({cls_name})", {}
-                # Vehicle-only closeup (> 70% of frame)
-                if cls_name in ["car", "truck", "bus", "motorcycle", "airplane", "train"] and area > 0.70:
+                # Indoor objects & furniture
+                if cls_name in [
+                    "couch", "chair", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote",
+                    "keyboard", "cell phone", "microwave", "oven", "toaster", "sink", "refrigerator",
+                    "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush",
+                    "bottle", "cup", "fork", "knife", "spoon", "bowl", "potted plant", "banana", "apple",
+                    "sandwich", "orange", "broccoli", "carrot", "pizza", "donut", "cake"
+                ] and (area > 0.02 or conf > 0.25):
+                    return False, f"Indoor object / furniture detected ({cls_name})", {}
+                # Vehicle-only closeup (> 55% of frame)
+                if cls_name in ["car", "truck", "bus", "motorcycle", "airplane", "train"] and area > 0.55:
                     return False, "Vehicle-only photo with no road surface context", {}
         except Exception as e:
             pass
 
-    return True, "Valid road surface image", {"road_ratio": lower_road_ratio, "mean_lum": mean_val}
+    # 9. Deep MobileNetV3 Scene Classification Rejection
+    cls_model, cls_meta = get_scene_classifier()
+    if cls_model is not None and cls_meta is not None:
+        try:
+            import torch
+            batch = cls_meta["transforms"](img_pil).unsqueeze(0)
+            with torch.no_grad():
+                logits = cls_model(batch).squeeze(0).softmax(0)
+            top5 = torch.topk(logits, 5)
+            top1_idx = top5.indices[0].item()
+            top1_prob = float(top5.values[0].item())
+            top1_cat = categories[top1_idx].lower()
+
+            for idx, prob_t in zip(top5.indices, top5.values):
+                prob = float(prob_t.item())
+                cat_name = categories[idx.item()].lower()
+                # Check against non-road classes (with appropriate confidence threshold)
+                min_threshold = 0.15 if (idx.item() == top1_idx) else 0.25
+                if prob >= min_threshold:
+                    for nr_kw in [
+                        "desk", "table", "chair", "laptop", "computer", "screen", "monitor", "keyboard", "mouse",
+                        "sliding door", "window", "room", "sofa", "couch", "bed", "wardrobe", "cabinet",
+                        "bookcase", "studio couch", "web site", "paper towel", "binder", "book jacket",
+                        "suit", "jersey", "dress", "gown", "shoe", "boot", "tie", "hat", "cap", "sunglasses",
+                        "pizza", "sandwich", "burger", "coffee mug", "cup", "bottle", "plate", "bowl",
+                        "toilet", "refrigerator", "microwave", "toaster", "dishwasher", "vacuum",
+                        "cliff", "alp", "volcano", "promontory", "lakeside", "seashore", "sandbar", "coral reef"
+                    ]:
+                        if nr_kw in cat_name:
+                            return False, f"Scene classified as non-road ({cat_name} - {prob*100:.1f}%)", {}
+        except Exception as e:
+            pass
+
+    return True, "Valid road surface image", {"road_ratio": lower_road_ratio, "mean_lum": mean_val, "lap_std": lap_std}
 
 def draw_hud_bounding_box(img_pil: Image.Image, boxes):
     """

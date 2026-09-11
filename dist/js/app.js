@@ -590,19 +590,39 @@ function validateRoadImageClientSide(imgElement, fileName = "") {
     return { valid: true, reason: "Known valid road sample" };
   }
 
-  // 2. Reject obvious non-road keywords in test filenames or uploads
+  // 2. Reject non-road keywords in filenames or uploads
   const rejectKeywords = [
-    "black", "white", "blank", "dark", "person", "selfie", "human", "face", "man", "woman",
-    "dog", "cat", "animal", "pet", "bird", "building", "house", "sky", "nature", "tree", "forest",
-    "flower", "food", "indoor", "room", "interior", "desk", "laptop", "office", "couch",
-    "toy", "screenshot", "ui", "chart", "icon", "avatar", "vehicle_only", "car_only", "random"
+    "black", "white", "blank", "dark", "blur", "blurry",
+    "wall", "drywall", "plaster",
+    "laptop", "macbook", "keyboard", "monitor", "computer", "screen", "mouse",
+    "table", "desk", "countertop", "plank",
+    "chair", "sofa", "couch", "bed", "furniture", "wardrobe", "cabinet",
+    "person", "selfie", "human", "face", "portrait", "man", "woman", "people", "avatar", "profile",
+    "dog", "cat", "animal", "pet", "bird", "horse", "cow", "wildlife", "puppy", "kitten",
+    "building", "house", "facade", "architecture", "apartment", "skyscraper", "roof", "window",
+    "room", "indoor", "interior", "bedroom", "kitchen", "office", "bathroom", "livingroom", "hall",
+    "vehicle_only", "car_only", "car_closeup", "truck_only",
+    "sky", "sky_only", "cloud", "clouds",
+    "nature", "trees_only", "tree", "forest", "grass", "flower", "garden", "leaf", "plant",
+    "random", "object", "toy", "coffee", "mug", "cup", "bottle", "shoe", "cloth", "shirt", "food",
+    "screenshot", "ui", "chart", "diagram", "doc", "document", "pdf", "icon"
   ];
+  const tokens = fn.toLowerCase().split(/[^a-z0-9]+/);
   for (const kw of rejectKeywords) {
-    if (fn.includes(kw)) {
-      return {
-        valid: false,
-        message: INVALID_IMAGE_ERROR
-      };
+    if (kw.includes("_") || kw.includes(" ")) {
+      if (fn.includes(kw)) {
+        return {
+          valid: false,
+          message: INVALID_IMAGE_ERROR
+        };
+      }
+    } else {
+      if (tokens.includes(kw) || new RegExp(`\\b${kw}\\b`, 'i').test(fn)) {
+        return {
+          valid: false,
+          message: INVALID_IMAGE_ERROR
+        };
+      }
     }
   }
 
@@ -639,10 +659,10 @@ function validateRoadImageClientSide(imgElement, fileName = "") {
         const delta = max - min;
         const sat = max > 0.01 ? delta / max : 0;
 
-        if (sat > 0.55) highSatCount++;
+        if (sat > 0.45) highSatCount++;
 
         if (i >= lowerStartIdx) {
-          if (sat < 0.45 && max >= 0.08 && max <= 0.95) {
+          if (sat < 0.42 && max >= 0.08 && max <= 0.95) {
             lowerRoadCount++;
           }
         }
@@ -654,19 +674,39 @@ function validateRoadImageClientSide(imgElement, fileName = "") {
       const highSatRatio = highSatCount / totalPixels;
       const lowerRoadRatio = lowerRoadCount / lowerPixels;
 
-      if (meanLum < 20.0) {
+      if (meanLum < 22.0) {
         return { valid: false, message: INVALID_IMAGE_ERROR };
       }
-      if (meanLum > 242.0 && stdLum < 16.0) {
+      if (meanLum > 240.0 && stdLum < 20.0) {
         return { valid: false, message: INVALID_IMAGE_ERROR };
       }
-      if (stdLum < 6.0) {
+      if (stdLum < 7.5) {
         return { valid: false, message: INVALID_IMAGE_ERROR };
       }
-      if (highSatRatio > 0.48) {
+      if (highSatRatio > 0.45) {
         return { valid: false, message: INVALID_IMAGE_ERROR };
       }
-      if (lowerRoadRatio < 0.18) {
+      if (lowerRoadRatio < 0.28) {
+        return { valid: false, message: INVALID_IMAGE_ERROR };
+      }
+
+      // Check surface gradient / grain in ground plane (reject flat smooth surfaces)
+      let sumGrad = 0;
+      let gradCount = 0;
+      for (let y = 40; y < 99; y += 2) {
+        for (let x = 0; x < 99; x += 2) {
+          const idx = (y * 100 + x) * 4;
+          const idxR = (y * 100 + (x + 1)) * 4;
+          const idxD = ((y + 1) * 100 + x) * 4;
+          const l = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+          const lR = 0.299 * data[idxR] + 0.587 * data[idxR + 1] + 0.114 * data[idxR + 2];
+          const lD = 0.299 * data[idxD] + 0.587 * data[idxD + 1] + 0.114 * data[idxD + 2];
+          sumGrad += Math.abs(lR - l) + Math.abs(lD - l);
+          gradCount += 2;
+        }
+      }
+      const meanGrad = gradCount > 0 ? sumGrad / gradCount : 0;
+      if (meanGrad < 2.0 && stdLum < 12.0) {
         return { valid: false, message: INVALID_IMAGE_ERROR };
       }
     } catch (canvasErr) {
