@@ -118,8 +118,46 @@
             </p>
             <span class="badge badge-critical">94% CONFIDENCE DETECTED</span>
           </div>
-          <div class="feature-media-box">
-            <img src="/assets/sample_pothole_1.jpg" alt="AI Road Defect Scan" />
+          <div class="feature-media-box interactive-feature-card" onclick="switchView('dashboard'); switchTab('scanner');" role="button" tabindex="0" title="Click to open AI Road Scanner">
+            <div class="card-hud-topbar">
+              <div class="card-hud-badge">
+                <span class="hud-status-dot dot-cyan"></span>
+                <span>AI OPTICAL SENSOR • CAM-04</span>
+              </div>
+              <div class="card-hud-meta">YOLOv8n • 60 FPS</div>
+            </div>
+
+            <div class="card-hud-viewport">
+              <img src="/assets/sample_pothole_1.jpg" alt="AI Road Defect Scan" class="card-hud-img" />
+              <div class="card-hud-scanline"></div>
+              
+              <!-- Reticle Targeting Overlay -->
+              <div class="card-reticle-box">
+                <div class="reticle-corner tl"></div>
+                <div class="reticle-corner tr"></div>
+                <div class="reticle-corner bl"></div>
+                <div class="reticle-corner br"></div>
+                <div class="reticle-tag">
+                  <span>⚠</span>
+                  <span>POTHOLE DETECTED</span>
+                  <span class="reticle-conf">94.2%</span>
+                </div>
+              </div>
+
+              <!-- Optical Sensor Telemetry HUD -->
+              <div class="card-hud-telemetry">
+                <div>GPS: <b>28.6139° N, 77.2090° E</b></div>
+                <div>SEV: <b style="color:var(--sev-critical);">CRITICAL (87/100)</b></div>
+              </div>
+            </div>
+
+            <div class="card-hud-footer">
+              <div class="hud-footer-left">
+                <span style="color:var(--accent-teal);">◉</span>
+                <span>LAUNCH AI ROAD SCANNER</span>
+              </div>
+              <span class="hud-action-arrow">RUN SCAN →</span>
+            </div>
           </div>
         </div>
 
@@ -139,8 +177,32 @@
               <span class="diff-step-node" style="padding:6px 14px; font-size:0.78rem;">REPAIR</span>
             </div>
           </div>
-          <div class="feature-media-box">
-            <img src="/assets/sample_crack_1.jpg" alt="Work Order Tracking" />
+          <div class="feature-media-box interactive-feature-card" onclick="switchView('dashboard'); switchTab('workorders');" role="button" tabindex="0" title="Click to view Work Orders">
+            <div class="card-hud-topbar">
+              <div class="card-hud-badge">
+                <span class="hud-status-dot dot-cyan"></span>
+                <span>DISPATCH TELEMETRY • WO-2048</span>
+              </div>
+              <div class="card-hud-meta">SLA: 24 HOURS</div>
+            </div>
+
+            <div class="card-hud-viewport">
+              <img src="/assets/sample_crack_1.jpg" alt="Work Order Tracking" class="card-hud-img" />
+              
+              <!-- Telemetry HUD -->
+              <div class="card-hud-telemetry">
+                <div>CONTRACTOR: <b>APEX INFRA</b></div>
+                <div>STATUS: <b style="color:var(--sev-risk);">IN PROGRESS</b></div>
+              </div>
+            </div>
+
+            <div class="card-hud-footer">
+              <div class="hud-footer-left">
+                <span style="color:var(--accent-blue);">▣</span>
+                <span>VIEW WORK ORDERS & DISPATCH</span>
+              </div>
+              <span class="hud-action-arrow" style="color:var(--accent-blue);">VIEW DISPATCH →</span>
+            </div>
           </div>
         </div>
 
@@ -154,8 +216,42 @@
             </p>
             <span class="badge badge-verified">✓ 100% REPAIR VERIFIED</span>
           </div>
-          <div class="feature-media-box">
-            <img src="/assets/sample_repaired_1.jpg" alt="AI Repair Verification" />
+          <div class="feature-media-box interactive-feature-card feature-verif-card" onclick="switchView('dashboard'); switchTab('verification');" role="button" tabindex="0" title="Click to open AI Repair Verification">
+            <div class="card-hud-topbar">
+              <div class="card-hud-badge">
+                <span class="hud-status-dot dot-green"></span>
+                <span>AI VERIFICATION PIPELINE • VRF-2048</span>
+              </div>
+              <div class="card-hud-meta">DUAL-PASS CV</div>
+            </div>
+
+            <div class="card-hud-viewport">
+              <img src="/assets/sample_repaired_1.jpg" alt="AI Repair Verification" class="card-hud-img" />
+              
+              <!-- Verification Stamp -->
+              <div class="card-verif-stamp">
+                <div class="verif-stamp-icon">✓</div>
+                <div class="verif-stamp-text">
+                  <div class="verif-stamp-title">REPAIR VERIFIED</div>
+                  <div class="verif-stamp-sub">Compaction: 98.4% • Fissure Sealed</div>
+                </div>
+                <span class="verif-stamp-badge">100% PASS</span>
+              </div>
+
+              <!-- Inspection Telemetry HUD -->
+              <div class="card-hud-telemetry">
+                <div>AUDIT: <b>WO-2048 APPROVED</b></div>
+                <div>WARRANTY: <b style="color:var(--sev-healthy);">12 MONTHS ACTIVE</b></div>
+              </div>
+            </div>
+
+            <div class="card-hud-footer">
+              <div class="hud-footer-left">
+                <span style="color:var(--sev-healthy);">✓</span>
+                <span>OPEN AI VERIFICATION SUITE</span>
+              </div>
+              <span class="hud-action-arrow" style="color:var(--sev-healthy);">TEST REPAIR →</span>
+            </div>
           </div>
         </div>
 
