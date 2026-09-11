@@ -300,15 +300,16 @@ function switchTab(tabName) {
     }
   });
 
-  // Update main layers
+  // Main Overview elements
   const overviewViewport = document.getElementById("center-viewport-container");
   const kpiRow = document.getElementById("kpi-floating-row");
   const bottomDrawer = document.getElementById("dash-bottom-drawer");
   const rightStage = document.getElementById("dash-right-stage");
 
-  // Hide all sub-layers
+  // Hide all sub-layers completely
   document.querySelectorAll(".dash-view-layer").forEach(layer => {
     layer.classList.remove("active");
+    layer.style.display = "none";
   });
 
   if (window.RHIScene && window.RHIScene.initMicroVisuals) {
@@ -316,10 +317,12 @@ function switchTab(tabName) {
   }
 
   if (tabName === "overview") {
-    if (overviewViewport) overviewViewport.style.display = "block";
-    if (kpiRow) kpiRow.style.display = "grid";
-    if (bottomDrawer) bottomDrawer.style.display = "flex";
-    if (rightStage) rightStage.style.display = "flex";
+    // Restore Overview elements
+    if (overviewViewport) overviewViewport.style.display = "";
+    if (kpiRow) kpiRow.style.display = "";
+    if (bottomDrawer) bottomDrawer.style.display = "";
+    if (rightStage) rightStage.style.display = "";
+
     if (window.RHIScene) {
       window.RHIScene.switchView("dashboard");
       window.RHIScene.resize();
@@ -328,14 +331,17 @@ function switchTab(tabName) {
       updateKPIsUI(AppState.analyticsData.kpis);
     }
   } else {
+    // Hide Overview elements completely
     if (overviewViewport) overviewViewport.style.display = "none";
     if (kpiRow) kpiRow.style.display = "none";
     if (bottomDrawer) bottomDrawer.style.display = "none";
     if (rightStage) rightStage.style.display = "none";
 
+    // Activate and display ONLY the target section layer
     const targetLayer = document.getElementById(`layer-${tabName}`);
     if (targetLayer) {
       targetLayer.classList.add("active");
+      targetLayer.style.display = "block";
     }
 
     if (tabName === "map") {

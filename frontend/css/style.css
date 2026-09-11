@@ -1902,7 +1902,7 @@ html, body {
 
   .kpi-floating-row {
     position: static !important;
-    display: grid !important;
+    display: grid;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 8px !important;
     margin: 8px 10px !important;
@@ -1963,7 +1963,7 @@ html, body {
     bottom: 8px !important;
     left: 8px !important;
     right: 8px !important;
-    display: flex !important;
+    display: flex;
     gap: 6px !important;
     overflow-x: auto !important;
     -webkit-overflow-scrolling: touch !important;
@@ -1981,7 +1981,7 @@ html, body {
 
   /* 8. Right-Side Stage Panels on Mobile (Full Width Stacked) */
   .dash-right-stage {
-    display: flex !important;
+    display: flex;
     width: 100% !important;
     max-width: 100% !important;
     padding: 14px 10px 30px 10px !important;
@@ -2010,6 +2010,10 @@ html, body {
     padding: 12px 10px 30px 10px !important;
     overflow-y: visible !important;
     box-sizing: border-box !important;
+    display: none;
+  }
+  .dash-view-layer.active {
+    display: block !important;
   }
 
   .scanner-container,
