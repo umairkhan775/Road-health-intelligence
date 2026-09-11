@@ -323,38 +323,7 @@
           <!-- Floating Road Network Health HUD Callouts -->
           <div class="viewport-hud-layer">
             
-            <!-- Road Health Legend -->
-            <div class="viewport-legend-box">
-              <div style="font-size:0.7rem; font-family:var(--font-mono); font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">
-                ROAD NETWORK HEALTH
-              </div>
-              <div style="display:flex; flex-direction:column; gap:4px; font-size:0.75rem; font-weight:600;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <span style="width:8px; height:8px; border-radius:50%; background:var(--sev-healthy);"></span>
-                  <span>Healthy Segments (72%)</span>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <span style="width:8px; height:8px; border-radius:50%; background:var(--sev-risk);"></span>
-                  <span>At Risk Segments (18%)</span>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <span style="width:8px; height:8px; border-radius:50%; background:var(--sev-critical);"></span>
-                  <span>Critical Segments (10%)</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Callout 1: Critical Road Segment -->
-            <div class="road-callout-card" style="top: 85px; left: 40px; border-left: 3px solid var(--sev-critical);" onclick="openDefectDetailModal(1)">
-              <div class="road-callout-tag" style="color:var(--sev-critical);">
-                <span style="width:6px; height:6px; border-radius:50%; background:var(--sev-critical);"></span>
-                CRITICAL SEGMENT • RHI-2048
-              </div>
-              <div class="road-callout-title">DEF-1024 (Pothole Detected)</div>
-              <div class="road-callout-sub">Risk Score: <b>87/100</b> • SLA: 24h</div>
-            </div>
-
-            <!-- Callout 2: At Risk Segment -->
+            <!-- Callout 1: At Risk Segment -->
             <div class="road-callout-card" style="top: 240px; left: 140px; border-left: 3px solid var(--sev-risk);" onclick="openDefectDetailModal(2)">
               <div class="road-callout-tag" style="color:var(--sev-risk);">
                 <span style="width:6px; height:6px; border-radius:50%; background:var(--sev-risk);"></span>
@@ -364,7 +333,7 @@
               <div class="road-callout-sub">Risk Score: <b>64/100</b> • Alligator Fissures</div>
             </div>
 
-            <!-- Callout 3: Healthy Corridor -->
+            <!-- Callout 2: Healthy Corridor -->
             <div class="road-callout-card" style="top: 170px; right: 60px; border-left: 3px solid var(--sev-healthy);">
               <div class="road-callout-tag" style="color:var(--sev-healthy);">
                 <span style="width:6px; height:6px; border-radius:50%; background:var(--sev-healthy);"></span>
@@ -372,19 +341,6 @@
               </div>
               <div class="road-callout-title">Cyber Hub North Corridor</div>
               <div class="road-callout-sub">Health Score: <b>92/100</b> • Verified Clean</div>
-            </div>
-
-            <!-- Live Infrastructure Telemetry Strip -->
-            <div class="viewport-infra-strip">
-              <div class="infra-item">
-                <span style="color:var(--accent-teal);">📹</span> 14 Smart CCTV Cameras
-              </div>
-              <div class="infra-item">
-                <span style="color:var(--accent-blue);">🚜</span> 4 Fleet Patrols Active
-              </div>
-              <div class="infra-item">
-                <span style="color:var(--sev-critical);">📍</span> 4 Defects Mapped
-              </div>
             </div>
 
           </div>
