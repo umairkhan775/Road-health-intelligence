@@ -118,46 +118,8 @@
             </p>
             <span class="badge badge-critical">94% CONFIDENCE DETECTED</span>
           </div>
-          <div class="feature-media-box interactive-feature-card" onclick="switchView('dashboard'); switchTab('scanner');" role="button" tabindex="0" title="Click to open AI Road Scanner">
-            <div class="card-hud-topbar">
-              <div class="card-hud-badge">
-                <span class="hud-status-dot dot-cyan"></span>
-                <span>AI OPTICAL SENSOR • CAM-04</span>
-              </div>
-              <div class="card-hud-meta">YOLOv8n • 60 FPS</div>
-            </div>
-
-            <div class="card-hud-viewport">
-              <img src="/assets/sample_pothole_1.jpg" alt="AI Road Defect Scan" class="card-hud-img" />
-              <div class="card-hud-scanline"></div>
-              
-              <!-- Reticle Targeting Overlay -->
-              <div class="card-reticle-box">
-                <div class="reticle-corner tl"></div>
-                <div class="reticle-corner tr"></div>
-                <div class="reticle-corner bl"></div>
-                <div class="reticle-corner br"></div>
-                <div class="reticle-tag">
-                  <span>⚠</span>
-                  <span>POTHOLE DETECTED</span>
-                  <span class="reticle-conf">94.2%</span>
-                </div>
-              </div>
-
-              <!-- Optical Sensor Telemetry HUD -->
-              <div class="card-hud-telemetry">
-                <div>GPS: <b>28.6139° N, 77.2090° E</b></div>
-                <div>SEV: <b style="color:var(--sev-critical);">CRITICAL (87/100)</b></div>
-              </div>
-            </div>
-
-            <div class="card-hud-footer">
-              <div class="hud-footer-left">
-                <span style="color:var(--accent-teal);">◉</span>
-                <span>LAUNCH AI ROAD SCANNER</span>
-              </div>
-              <span class="hud-action-arrow">RUN SCAN →</span>
-            </div>
+          <div class="feature-media-box">
+            <img src="/assets/sample_pothole_1.jpg" alt="AI Road Defect Scan" />
           </div>
         </div>
 
@@ -177,32 +139,8 @@
               <span class="diff-step-node" style="padding:6px 14px; font-size:0.78rem;">REPAIR</span>
             </div>
           </div>
-          <div class="feature-media-box interactive-feature-card" onclick="switchView('dashboard'); switchTab('workorders');" role="button" tabindex="0" title="Click to view Work Orders">
-            <div class="card-hud-topbar">
-              <div class="card-hud-badge">
-                <span class="hud-status-dot dot-cyan"></span>
-                <span>DISPATCH TELEMETRY • WO-2048</span>
-              </div>
-              <div class="card-hud-meta">SLA: 24 HOURS</div>
-            </div>
-
-            <div class="card-hud-viewport">
-              <img src="/assets/sample_crack_1.jpg" alt="Work Order Tracking" class="card-hud-img" />
-              
-              <!-- Telemetry HUD -->
-              <div class="card-hud-telemetry">
-                <div>CONTRACTOR: <b>APEX INFRA</b></div>
-                <div>STATUS: <b style="color:var(--sev-risk);">IN PROGRESS</b></div>
-              </div>
-            </div>
-
-            <div class="card-hud-footer">
-              <div class="hud-footer-left">
-                <span style="color:var(--accent-blue);">▣</span>
-                <span>VIEW WORK ORDERS & DISPATCH</span>
-              </div>
-              <span class="hud-action-arrow" style="color:var(--accent-blue);">VIEW DISPATCH →</span>
-            </div>
+          <div class="feature-media-box">
+            <img src="/assets/sample_crack_1.jpg" alt="Work Order Tracking" />
           </div>
         </div>
 
@@ -216,42 +154,8 @@
             </p>
             <span class="badge badge-verified">✓ 100% REPAIR VERIFIED</span>
           </div>
-          <div class="feature-media-box interactive-feature-card feature-verif-card" onclick="switchView('dashboard'); switchTab('verification');" role="button" tabindex="0" title="Click to open AI Repair Verification">
-            <div class="card-hud-topbar">
-              <div class="card-hud-badge">
-                <span class="hud-status-dot dot-green"></span>
-                <span>AI VERIFICATION PIPELINE • VRF-2048</span>
-              </div>
-              <div class="card-hud-meta">DUAL-PASS CV</div>
-            </div>
-
-            <div class="card-hud-viewport">
-              <img src="/assets/sample_repaired_1.jpg" alt="AI Repair Verification" class="card-hud-img" />
-              
-              <!-- Verification Stamp -->
-              <div class="card-verif-stamp">
-                <div class="verif-stamp-icon">✓</div>
-                <div class="verif-stamp-text">
-                  <div class="verif-stamp-title">REPAIR VERIFIED</div>
-                  <div class="verif-stamp-sub">Compaction: 98.4% • Fissure Sealed</div>
-                </div>
-                <span class="verif-stamp-badge">100% PASS</span>
-              </div>
-
-              <!-- Inspection Telemetry HUD -->
-              <div class="card-hud-telemetry">
-                <div>AUDIT: <b>WO-2048 APPROVED</b></div>
-                <div>WARRANTY: <b style="color:var(--sev-healthy);">12 MONTHS ACTIVE</b></div>
-              </div>
-            </div>
-
-            <div class="card-hud-footer">
-              <div class="hud-footer-left">
-                <span style="color:var(--sev-healthy);">✓</span>
-                <span>OPEN AI VERIFICATION SUITE</span>
-              </div>
-              <span class="hud-action-arrow" style="color:var(--sev-healthy);">TEST REPAIR →</span>
-            </div>
+          <div class="feature-media-box">
+            <img src="/assets/sample_repaired_1.jpg" alt="AI Repair Verification" />
           </div>
         </div>
 
@@ -531,22 +435,45 @@
 
             <!-- Right Column: 3D Surface Inspection & Scanner Results -->
             <div style="display:flex; flex-direction:column; gap:20px;">
-              <!-- 3D Surface Scan Telemetry Card -->
-              <div class="glass-panel" id="scanner-3d-visual-card" style="padding:24px;">
+              <!-- Road Inspection & Damage Detection Visual Card -->
+              <div class="glass-panel interactive-feature-widget" id="scanner-3d-visual-card" onclick="document.getElementById('btn-run-analysis').click()" style="padding:22px; cursor:pointer; transition:all 0.25s ease;" title="Click to trigger AI Road Scan">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                  <h3 class="panel-header-title" style="margin:0;">◉ 3D SURFACE SCAN TELEMETRY</h3>
-                  <span class="badge badge-low" style="background:#0F172A; color:#2DD4BF; border-color:#0F766E;">OPTICAL 3D</span>
+                  <h3 class="panel-header-title" style="margin:0;">◉ ROAD DAMAGE INSPECTION</h3>
+                  <span class="badge badge-low" style="background:#0F172A; color:#2DD4BF; border-color:#0F766E;">OPTICAL CV READY</span>
                 </div>
                 <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px;">
-                  Dynamic volumetric depth contour profiling and point cloud terrain analysis.
+                  High-precision pavement damage detection and optical reticle isolation.
                 </p>
 
-                <div style="position:relative; width:100%; height:200px; border-radius:10px; overflow:hidden; background:#0F172A; border:1px solid rgba(45,212,191,0.25);">
-                  <canvas id="scanner-3d-canvas" style="width:100%; height:100%; display:block;"></canvas>
-                  <div style="position:absolute; bottom:8px; left:12px; right:12px; display:flex; justify-content:space-between; font-size:0.68rem; font-family:var(--font-mono); color:#94A3B8; pointer-events:none;">
-                    <span>RESOLUTION: 1.2mm</span>
-                    <span style="color:#2DD4BF;">LASER: SCANNING</span>
-                    <span>MESH: 32x32</span>
+                <div style="position:relative; width:100%; height:190px; border-radius:10px; overflow:hidden; background:linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border:1px solid rgba(45,212,191,0.25); display:flex; flex-direction:column; justify-content:center; align-items:center; padding:16px;">
+                  <!-- Professional Road Inspection Vector Icon Graphic -->
+                  <div style="position:relative; width:64px; height:64px; margin-bottom:8px;">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="6" y="10" width="52" height="44" rx="8" stroke="#0F766E" stroke-width="2.5" fill="#0A0F1D" />
+                      <!-- Road Perspective -->
+                      <path d="M18 46L24 18" stroke="#64748B" stroke-width="2" stroke-linecap="round" />
+                      <path d="M46 46L40 18" stroke="#64748B" stroke-width="2" stroke-linecap="round" />
+                      <line x1="32" y1="20" x2="32" y2="28" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" />
+                      <line x1="32" y1="36" x2="32" y2="44" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" />
+                      <!-- Reticle Target Brackets -->
+                      <path d="M22 28H28M22 28V34" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M42 28H36M42 28V34" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M22 40H28M22 40V34" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M42 40H36M42 40V34" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                      <!-- Center Scanning Dot -->
+                      <circle cx="32" cy="34" r="3" fill="#2DD4BF" />
+                    </svg>
+                  </div>
+                  <div style="font-family:var(--font-display); font-size:0.88rem; font-weight:800; color:#FFFFFF; text-align:center;">
+                    AI ROAD DAMAGE SCANNER
+                  </div>
+                  <div style="font-family:var(--font-mono); font-size:0.68rem; color:#2DD4BF; margin-top:3px;">
+                    YOLOv8n Neural Vision • 4K Optical Reticle
+                  </div>
+
+                  <div style="position:absolute; bottom:6px; left:12px; right:12px; display:flex; justify-content:space-between; font-size:0.62rem; font-family:var(--font-mono); color:#94A3B8;">
+                    <span>LAT: 28.6139° N</span>
+                    <span style="color:#2DD4BF;">CLICK TO SCAN →</span>
                   </div>
                 </div>
 
@@ -823,21 +750,38 @@
 
             <!-- Right Column: 3D Compaction Visualizer & Verification Outcome Card -->
             <div style="display:flex; flex-direction:column; gap:20px;">
-              <!-- 3D Pavement Integrity Visualizer -->
-              <div class="glass-panel" id="verif-3d-visual-card" style="padding:24px;">
+              <!-- AI Verification & Computer Vision Inspection Visual Card -->
+              <div class="glass-panel interactive-feature-widget" id="verif-3d-visual-card" onclick="document.getElementById('btn-run-verification').click()" style="padding:22px; cursor:pointer; transition:all 0.25s ease;" title="Click to trigger AI Repair Verification">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                  <h3 class="panel-header-title" style="margin:0;">✓ 3D COMPACTION TELEMETRY</h3>
-                  <span class="badge badge-low" style="background:#0F172A; color:#16A34A; border-color:#16A34A;">DENSITY VERIFIER</span>
+                  <h3 class="panel-header-title" style="margin:0;">✓ AI REPAIR VERIFICATION</h3>
+                  <span class="badge badge-low" style="background:#0F172A; color:#16A34A; border-color:#16A34A;">DUAL-STAGE AUDIT</span>
                 </div>
                 <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px;">
-                  3D sub-base structural integrity & asphalt compaction cross-section.
+                  Computer-vision asphalt compaction verification and closure authorization.
                 </p>
-                <div style="position:relative; width:100%; height:180px; border-radius:10px; overflow:hidden; background:#0F172A; border:1px solid rgba(22,163,74,0.3);">
-                  <canvas id="verif-3d-canvas" style="width:100%; height:100%; display:block;"></canvas>
-                  <div style="position:absolute; bottom:8px; left:12px; right:12px; display:flex; justify-content:space-between; font-size:0.68rem; font-family:var(--font-mono); color:#94A3B8; pointer-events:none;">
-                    <span>LAYER: TOP LIFT</span>
-                    <span style="color:#4ADE80;">DENSITY: 98.4%</span>
-                    <span>FLATNESS: 0.8mm</span>
+
+                <div style="position:relative; width:100%; height:180px; border-radius:10px; overflow:hidden; background:linear-gradient(145deg, #0F172A 0%, #1E293B 100%); border:1px solid rgba(22,163,74,0.3); display:flex; flex-direction:column; justify-content:center; align-items:center; padding:16px;">
+                  <!-- Professional Verification Seal Vector Icon Graphic -->
+                  <div style="position:relative; width:64px; height:64px; margin-bottom:8px;">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <!-- Outer Shield Badge -->
+                      <path d="M32 6L52 14V30C52 44 43 53 32 58C21 53 12 44 12 30V14L32 6Z" stroke="#16A34A" stroke-width="2.5" fill="#0A0F1D" stroke-linejoin="round" />
+                      <!-- Inner Verified Checkmark -->
+                      <circle cx="32" cy="32" r="14" fill="rgba(22, 163, 74, 0.15)" stroke="#16A34A" stroke-width="1.5" />
+                      <path d="M25 32L30 37L39 27" stroke="#22C55E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                  </div>
+
+                  <div style="font-family:var(--font-display); font-size:0.88rem; font-weight:800; color:#FFFFFF; text-align:center;">
+                    AI COMPACTION & SEAL VERIFIER
+                  </div>
+                  <div style="font-family:var(--font-mono); font-size:0.68rem; color:#4ADE80; margin-top:3px;">
+                    Dual-Pass CV • 98.4% Density Standard
+                  </div>
+
+                  <div style="position:absolute; bottom:6px; left:12px; right:12px; display:flex; justify-content:space-between; font-size:0.62rem; font-family:var(--font-mono); color:#94A3B8;">
+                    <span>SLA: COMPLIANT</span>
+                    <span style="color:#4ADE80;">CLICK TO VERIFY →</span>
                   </div>
                 </div>
               </div>
