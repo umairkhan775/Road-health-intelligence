@@ -206,6 +206,9 @@ document.addEventListener("DOMContentLoaded", () => {
 function initThreeScene() {
   if (window.RHIScene) {
     window.RHIScene.init("hero-canvas-container", "center-viewport-container");
+    if (window.RHIScene.initMicroVisuals) {
+      window.RHIScene.initMicroVisuals();
+    }
   }
 }
 
@@ -307,6 +310,10 @@ function switchTab(tabName) {
   document.querySelectorAll(".dash-view-layer").forEach(layer => {
     layer.classList.remove("active");
   });
+
+  if (window.RHIScene && window.RHIScene.initMicroVisuals) {
+    window.RHIScene.initMicroVisuals();
+  }
 
   if (tabName === "overview") {
     if (overviewViewport) overviewViewport.style.display = "block";

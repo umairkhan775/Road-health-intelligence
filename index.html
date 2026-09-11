@@ -433,40 +433,78 @@
               </button>
             </div>
 
-            <!-- Scanner Results Box -->
-            <div class="glass-panel" id="scanner-results-panel" style="padding:24px; display:none;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                <h3 class="panel-header-title" style="margin:0;">AI DETECTION RESULT</h3>
-                <span class="badge badge-low" id="res-mode-badge">DEMO DETECTION</span>
+            <!-- Right Column: 3D Surface Inspection & Scanner Results -->
+            <div style="display:flex; flex-direction:column; gap:20px;">
+              <!-- 3D Surface Scan Telemetry Card -->
+              <div class="glass-panel" id="scanner-3d-visual-card" style="padding:24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                  <h3 class="panel-header-title" style="margin:0;">◉ 3D SURFACE SCAN TELEMETRY</h3>
+                  <span class="badge badge-low" style="background:#0F172A; color:#2DD4BF; border-color:#0F766E;">OPTICAL 3D</span>
+                </div>
+                <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px;">
+                  Dynamic volumetric depth contour profiling and point cloud terrain analysis.
+                </p>
+
+                <div style="position:relative; width:100%; height:200px; border-radius:10px; overflow:hidden; background:#0F172A; border:1px solid rgba(45,212,191,0.25);">
+                  <canvas id="scanner-3d-canvas" style="width:100%; height:100%; display:block;"></canvas>
+                  <div style="position:absolute; bottom:8px; left:12px; right:12px; display:flex; justify-content:space-between; font-size:0.68rem; font-family:var(--font-mono); color:#94A3B8; pointer-events:none;">
+                    <span>RESOLUTION: 1.2mm</span>
+                    <span style="color:#2DD4BF;">LASER: SCANNING</span>
+                    <span>MESH: 32x32</span>
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:14px;">
+                  <div style="background:#F8FAFC; border:1px solid #E2E8F0; padding:8px; border-radius:6px; text-align:center;">
+                    <div style="font-size:0.65rem; color:var(--text-muted);">ROUGHNESS (IRI)</div>
+                    <div style="font-size:0.9rem; font-weight:800; color:var(--accent-navy);">2.4 mm/m</div>
+                  </div>
+                  <div style="background:#F8FAFC; border:1px solid #E2E8F0; padding:8px; border-radius:6px; text-align:center;">
+                    <div style="font-size:0.65rem; color:var(--text-muted);">SLOPE GRADIENT</div>
+                    <div style="font-size:0.9rem; font-weight:800; color:var(--accent-teal);">1.8% CR</div>
+                  </div>
+                  <div style="background:#F8FAFC; border:1px solid #E2E8F0; padding:8px; border-radius:6px; text-align:center;">
+                    <div style="font-size:0.65rem; color:var(--text-muted);">DEFECT DEPTH</div>
+                    <div style="font-size:0.9rem; font-weight:800; color:var(--sev-critical);">42 mm</div>
+                  </div>
+                </div>
               </div>
 
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-                <div style="background:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;">
-                  <div style="font-size:0.7rem; color:var(--text-muted);">DEFECT TYPE</div>
-                  <div style="font-size:1.1rem; font-weight:800; color:var(--accent-navy);" id="res-defect-type">POTHOLE</div>
+              <!-- Scanner Results Box -->
+              <div class="glass-panel" id="scanner-results-panel" style="padding:24px; display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                  <h3 class="panel-header-title" style="margin:0;">AI DETECTION RESULT</h3>
+                  <span class="badge badge-low" id="res-mode-badge">DEMO DETECTION</span>
                 </div>
-                <div style="background:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;">
-                  <div style="font-size:0.7rem; color:var(--text-muted);">CONFIDENCE</div>
-                  <div style="font-size:1.1rem; font-weight:800; color:var(--accent-teal);" id="res-confidence">94%</div>
-                </div>
-                <div style="background:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;">
-                  <div style="font-size:0.7rem; color:var(--text-muted);">SEVERITY</div>
-                  <div style="font-size:1.1rem; font-weight:800; color:var(--sev-risk);" id="res-severity">HIGH</div>
-                </div>
-                <div style="background:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;">
-                  <div style="font-size:0.7rem; color:var(--text-muted);">PRIORITY SCORE</div>
-                  <div style="font-size:1.1rem; font-weight:800; color:var(--sev-critical);" id="res-priority">87 / 100</div>
-                </div>
-              </div>
 
-              <div style="font-size:0.78rem; font-family:var(--font-mono); color:var(--text-muted); margin-bottom:16px; border-top:1px solid var(--border-subtle); padding-top:12px;">
-                <div>GPS: <span id="res-gps" style="color:var(--accent-navy); font-weight:600;">28.6139° N, 77.2090° E</span></div>
-                <div style="margin-top:4px;">ROAD: <span id="res-road" style="color:var(--accent-navy); font-weight:600;">Demo Road 07</span></div>
-              </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                  <div style="background:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;">
+                    <div style="font-size:0.7rem; color:var(--text-muted);">DEFECT TYPE</div>
+                    <div style="font-size:1.1rem; font-weight:800; color:var(--accent-navy);" id="res-defect-type">POTHOLE</div>
+                  </div>
+                  <div style="background:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;">
+                    <div style="font-size:0.7rem; color:var(--text-muted);">CONFIDENCE</div>
+                    <div style="font-size:1.1rem; font-weight:800; color:var(--accent-teal);" id="res-confidence">94%</div>
+                  </div>
+                  <div style="background:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;">
+                    <div style="font-size:0.7rem; color:var(--text-muted);">SEVERITY</div>
+                    <div style="font-size:1.1rem; font-weight:800; color:var(--sev-risk);" id="res-severity">HIGH</div>
+                  </div>
+                  <div style="background:#F8FAFC; border:1px solid #E2E8F0; padding:10px; border-radius:8px;">
+                    <div style="font-size:0.7rem; color:var(--text-muted);">PRIORITY SCORE</div>
+                    <div style="font-size:1.1rem; font-weight:800; color:var(--sev-critical);" id="res-priority">87 / 100</div>
+                  </div>
+                </div>
 
-              <button class="btn btn-emerald" id="btn-save-defect" style="width:100%;">
-                SAVE DEFECT TO SYSTEM
-              </button>
+                <div style="font-size:0.78rem; font-family:var(--font-mono); color:var(--text-muted); margin-bottom:16px; border-top:1px solid var(--border-subtle); padding-top:12px;">
+                  <div>GPS: <span id="res-gps" style="color:var(--accent-navy); font-weight:600;">28.6139° N, 77.2090° E</span></div>
+                  <div style="margin-top:4px;">ROAD: <span id="res-road" style="color:var(--accent-navy); font-weight:600;">Demo Road 07</span></div>
+                </div>
+
+                <button class="btn btn-emerald" id="btn-save-defect" style="width:100%;">
+                  SAVE DEFECT TO SYSTEM
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -652,7 +690,7 @@
 
         <!-- TAB LAYER 5: AI REPAIR VERIFICATION -->
         <div class="dash-view-layer" id="layer-verification">
-          <div class="verification-suite-wrapper">
+          <div class="verification-suite-wrapper" style="max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1.1fr 0.9fr; gap:24px; align-items:start;">
             <div class="glass-panel" style="padding:24px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <h2 style="font-family:var(--font-display); font-size:1.5rem; color:var(--accent-navy); font-weight:800; margin:0;">AI REPAIR VERIFICATION SUITE</h2>
@@ -687,11 +725,33 @@
               </div>
             </div>
 
-            <!-- Verification Outcome Card -->
-            <div class="glass-panel" id="verif-outcome-card" style="padding:20px; display:none;">
-              <h3 id="verif-outcome-title" style="font-family:var(--font-display); font-size:1.3rem; margin-bottom:6px;"></h3>
-              <div id="verif-outcome-conf" style="font-family:var(--font-mono); font-size:0.85rem; color:var(--accent-teal); font-weight:700; margin-bottom:10px;"></div>
-              <p id="verif-outcome-msg" style="font-size:0.85rem; color:var(--text-muted);"></p>
+            <!-- Right Column: 3D Compaction Visualizer & Verification Outcome Card -->
+            <div style="display:flex; flex-direction:column; gap:20px;">
+              <!-- 3D Pavement Integrity Visualizer -->
+              <div class="glass-panel" id="verif-3d-visual-card" style="padding:24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                  <h3 class="panel-header-title" style="margin:0;">✓ 3D COMPACTION TELEMETRY</h3>
+                  <span class="badge badge-low" style="background:#0F172A; color:#16A34A; border-color:#16A34A;">DENSITY VERIFIER</span>
+                </div>
+                <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px;">
+                  3D sub-base structural integrity & asphalt compaction cross-section.
+                </p>
+                <div style="position:relative; width:100%; height:180px; border-radius:10px; overflow:hidden; background:#0F172A; border:1px solid rgba(22,163,74,0.3);">
+                  <canvas id="verif-3d-canvas" style="width:100%; height:100%; display:block;"></canvas>
+                  <div style="position:absolute; bottom:8px; left:12px; right:12px; display:flex; justify-content:space-between; font-size:0.68rem; font-family:var(--font-mono); color:#94A3B8; pointer-events:none;">
+                    <span>LAYER: TOP LIFT</span>
+                    <span style="color:#4ADE80;">DENSITY: 98.4%</span>
+                    <span>FLATNESS: 0.8mm</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Verification Outcome Card -->
+              <div class="glass-panel" id="verif-outcome-card" style="padding:20px; display:none;">
+                <h3 id="verif-outcome-title" style="font-family:var(--font-display); font-size:1.3rem; margin-bottom:6px;"></h3>
+                <div id="verif-outcome-conf" style="font-family:var(--font-mono); font-size:0.85rem; color:var(--accent-teal); font-weight:700; margin-bottom:10px;"></div>
+                <p id="verif-outcome-msg" style="font-size:0.85rem; color:var(--text-muted);"></p>
+              </div>
             </div>
           </div>
         </div>
@@ -833,7 +893,7 @@
         </div>
 
         <!-- LIVE AI FEED -->
-        <div class="glass-panel" style="padding:14px; flex:1;">
+        <div class="glass-panel" style="padding:14px;">
           <div class="panel-header-title">LIVE AI DETECTION STREAM</div>
           <div style="display:flex; flex-direction:column; gap:8px; font-size:0.75rem;">
             <div style="border-left:3px solid var(--sev-critical); padding-left:8px;">
@@ -844,6 +904,24 @@
             </div>
             <div style="border-left:3px solid var(--sev-healthy); padding-left:8px;">
               <span style="color:var(--sev-healthy); font-weight:bold;">[VERIFIED]</span> Repair confirmed on Metro Outer Bypass
+            </div>
+          </div>
+        </div>
+
+        <!-- 3D INFRASTRUCTURE RADAR -->
+        <div class="glass-panel" style="padding:14px;">
+          <div class="panel-header-title">
+            <span style="width:7px; height:7px; border-radius:50%; background:var(--accent-teal); display:inline-block; animation: radar-pulse 2s infinite;"></span>
+            3D TELEMETRY RADAR
+          </div>
+          <div style="position:relative; width:100%; height:130px; border-radius:8px; overflow:hidden; background:#0F172A; border:1px solid rgba(45,212,191,0.25);">
+            <canvas id="telemetry-lidar-canvas" style="width:100%; height:100%; display:block;"></canvas>
+            <div style="position:absolute; top:6px; right:8px; font-size:0.62rem; font-family:var(--font-mono); color:#2DD4BF; background:rgba(15,23,42,0.85); padding:2px 6px; border-radius:4px; border:1px solid rgba(45,212,191,0.3);">
+              LiDAR 64-CH
+            </div>
+            <div style="position:absolute; bottom:6px; left:8px; right:8px; display:flex; justify-content:space-between; font-size:0.62rem; font-family:var(--font-mono); color:#94A3B8; pointer-events:none;">
+              <span>LAT: 28.6139° N</span>
+              <span style="color:#2DD4BF;">SWEEP: 360°</span>
             </div>
           </div>
         </div>
