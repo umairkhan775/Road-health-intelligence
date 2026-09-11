@@ -456,6 +456,26 @@
                   SAVE DEFECT TO SYSTEM
                 </button>
               </div>
+
+              <!-- Scanner Invalid / Rejection Notice Box -->
+              <div class="glass-panel" id="scanner-invalid-panel" style="padding:24px; display:none; border-left:4px solid #DC2626; background:rgba(254,242,242,0.95);">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                  <div style="width:36px; height:36px; border-radius:50%; background:#FEE2E2; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 style="font-family:var(--font-display); font-size:1rem; font-weight:800; color:#991B1B; margin:0;">IMAGE VALIDATION REJECTED</h3>
+                    <div style="font-size:0.75rem; color:#B91C1C; font-family:var(--font-mono);">NON-ROAD SURFACE DETECTED</div>
+                  </div>
+                </div>
+                <p id="scanner-invalid-msg" style="font-size:0.9rem; font-weight:600; color:#7F1D1D; margin:0; line-height:1.5;">
+                  Invalid image. Please upload a clear road image showing a pothole or road crack.
+                </p>
+              </div>
             </div>
           </div>
         </div>

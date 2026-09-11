@@ -146,14 +146,22 @@ async def detect_road_defects(file: UploadFile = File(...)):
 
     result = analyze_road_image(contents, file.filename or "upload.jpg")
     
-    # Calculate preliminary priority engine factors
-    primary = result["primary_defect"]
-    priority_calc = calculate_priority(
-        defect_type=primary["defect_type"],
-        severity=primary["severity"],
-        road_code=primary["road_code"]
-    )
-    result["priority"] = priority_calc
+    # Return early if validation failed or if road is safe/defect-free
+    if not result.get("valid", True) or not result.get("success", True):
+        return result
+
+    if result.get("is_safe", False):
+        return result
+
+    # Calculate preliminary priority engine factors for detected defects
+    primary = result.get("primary_defect")
+    if primary:
+        priority_calc = calculate_priority(
+            defect_type=primary.get("defect_type", "Pothole"),
+            severity=primary.get("severity", "HIGH"),
+            road_code=primary.get("road_code", "RHI-1000")
+        )
+        result["priority"] = priority_calc
 
     return result
 
