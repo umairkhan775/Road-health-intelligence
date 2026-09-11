@@ -183,13 +183,70 @@ def get_defects(severity: Optional[str] = None, status: Optional[str] = None, db
             "road_name": d.road_name,
             "road_code": d.road_code,
             "image_url": d.image_url,
-            "annotated_image_url": d.annotated_image_url,
+            "annotated_image_url": d.annotated_image_url or d.image_url,
             "status": d.status,
             "observation_count": d.observation_count,
             "is_recurring": d.is_recurring,
             "created_at": d.created_at.isoformat()
         })
     return response
+
+@app.get("/api/defects/{defect_id}")
+def get_defect_detail(defect_id: int, db: Session = Depends(get_db)):
+    defect = db.query(Defect).options(
+        joinedload(Defect.road_segment),
+        joinedload(Defect.observations),
+        joinedload(Defect.work_order),
+        joinedload(Defect.audit_events)
+    ).filter(Defect.id == defect_id).first()
+
+    if not defect:
+        raise HTTPException(status_code=404, detail="Defect record not found.")
+
+    audits = sorted(defect.audit_events, key=lambda a: a.timestamp, reverse=True) if defect.audit_events else []
+    audit_list = [
+        {
+            "id": a.id,
+            "event_type": a.event_type,
+            "stage": a.stage,
+            "title": a.title,
+            "description": a.description,
+            "timestamp": a.timestamp.strftime("%b %d, %H:%M UTC")
+        }
+        for a in audits
+    ]
+
+    return {
+        "id": defect.id,
+        "defect_code": defect.defect_code,
+        "defect_type": defect.defect_type,
+        "severity": defect.severity,
+        "confidence": defect.confidence,
+        "priority_score": defect.priority_score,
+        "factor_severity": defect.factor_severity,
+        "factor_road_importance": defect.factor_road_importance,
+        "factor_traffic": defect.factor_traffic,
+        "factor_risk": defect.factor_risk,
+        "factor_recurrence": defect.factor_recurrence,
+        "latitude": defect.latitude,
+        "longitude": defect.longitude,
+        "road_name": defect.road_name,
+        "road_code": defect.road_code,
+        "image_url": defect.image_url or "/assets/sample_pothole_1.jpg",
+        "annotated_image_url": defect.annotated_image_url or defect.image_url or "/assets/sample_pothole_1.jpg",
+        "status": defect.status,
+        "observation_count": defect.observation_count,
+        "is_recurring": defect.is_recurring,
+        "created_at": defect.created_at.isoformat(),
+        "work_order": {
+            "id": defect.work_order.id,
+            "code": defect.work_order.code,
+            "contractor": defect.work_order.contractor,
+            "status": defect.work_order.status,
+            "sla_hours": defect.work_order.sla_hours
+        } if defect.work_order else None,
+        "audit_trail": audit_list
+    }
 
 @app.post("/api/defects")
 def create_defect(data: dict, db: Session = Depends(get_db)):
@@ -203,8 +260,8 @@ def create_defect(data: dict, db: Session = Depends(get_db)):
     confidence = float(data.get("confidence", 0.90))
     road_name = data.get("road_name", "Demo Road 07")
     road_code = data.get("road_code", "RHI-2048")
-    image_url = data.get("image_url", "/assets/sample_pothole_1.jpg")
-    annotated_image_url = data.get("annotated_image_url", image_url)
+    image_url = data.get("image_url") or "/assets/sample_pothole_1.jpg"
+    annotated_image_url = data.get("annotated_image_url") or image_url
     source = data.get("source", "Citizen Upload App")
 
     # Check for spatial clustering
@@ -377,15 +434,17 @@ async def verify_repair(
             if defect.work_order:
                 defect.work_order.status = "VERIFIED"
 
-            warranty = WarrantyRecord(
-                defect_id=defect.id,
-                contractor="Apex Infra Infrastructure Ltd",
-                warranty_months=12,
-                start_date=datetime.datetime.utcnow(),
-                end_date=datetime.datetime.utcnow() + datetime.timedelta(days=365),
-                status="ACTIVE"
-            )
-            db.add(warranty)
+            existing_w = db.query(WarrantyRecord).filter(WarrantyRecord.defect_id == defect.id).first()
+            if not existing_w:
+                warranty = WarrantyRecord(
+                    defect_id=defect.id,
+                    contractor=defect.work_order.contractor if defect.work_order else "Apex Infra Infrastructure Ltd",
+                    warranty_months=12,
+                    start_date=datetime.datetime.utcnow(),
+                    end_date=datetime.datetime.utcnow() + datetime.timedelta(days=365),
+                    status="ACTIVE"
+                )
+                db.add(warranty)
 
             audit = AuditEvent(
                 defect_id=defect.id,
@@ -548,15 +607,23 @@ def get_all_audit_trail(db: Session = Depends(get_db)):
 
 @app.get("/api/analytics")
 def get_analytics(db: Session = Depends(get_db)):
-    total_defects = 1284
-    critical_defects = 146
-    open_work_orders = 327
-    ai_verified = 2918
-    recurrence_count = 73
+    baseline_defects = 1284
+    baseline_critical = 146
+    baseline_open_wo = 327
+    baseline_verified = 2918
+    baseline_recurrence = 73
 
     db_total = db.query(Defect).count()
-    if db_total > 4:
-        total_defects = total_defects + db_total - 4
+    db_critical = db.query(Defect).filter(Defect.severity == "CRITICAL").count()
+    db_open_wo = db.query(WorkOrder).filter(WorkOrder.status.in_(["ASSIGNED", "IN PROGRESS"])).count()
+    db_verified = db.query(Verification).filter(Verification.is_verified == True).count()
+    db_recurrence = db.query(Defect).filter(Defect.is_recurring == True).count()
+
+    total_defects = max(db_total, baseline_defects + (db_total - 4))
+    critical_defects = max(db_critical, baseline_critical + (db_critical - 2))
+    open_work_orders = max(db_open_wo, baseline_open_wo + (db_open_wo - 3))
+    ai_verified = max(db_verified, baseline_verified + (db_verified - 1))
+    recurrence_count = max(db_recurrence, baseline_recurrence + (db_recurrence - 1))
 
     return {
         "kpis": {
@@ -570,7 +637,7 @@ def get_analytics(db: Session = Depends(get_db)):
         "charts": {
             "defects_by_severity": {
                 "labels": ["Critical", "High", "Medium", "Low"],
-                "data": [146, 420, 510, 208],
+                "data": [critical_defects, 420, 510, 208],
                 "colors": ["#DC2626", "#F59E0B", "#EAB308", "#0284C7"]
             },
             "repair_verification_rate": {
