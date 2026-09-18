@@ -1,4 +1,4 @@
-# Road Health Intelligence (RHI) 🛣️🤖
+# Road Health Intelligence (RHI) 
 
 > **AI-Powered 3D Road Infrastructure Intelligence & Command Platform**  
 > *Detect. Prioritize. Repair. Verify. Monitor.*
